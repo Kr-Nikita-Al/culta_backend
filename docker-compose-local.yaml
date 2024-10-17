@@ -1,0 +1,19 @@
+version: "3.0"
+services:
+  db:
+    container_name: 'main_db'
+    image: postgres:14.1-alpine
+    # В случае ошибки всегда будет рестарт
+    restart: always
+    environment:
+      - POSTGRES_USER=nikita
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=main_db
+    ports:
+      # Переброска портов от ОС гостевой (куда я делаю запрос) к ОС контейнера (куда прилетает запрос)
+      - "5431:5432"
+    networks:
+      - custom
+networks:
+  custom:
+    driver: bridge

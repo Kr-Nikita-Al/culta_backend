@@ -1,0 +1,37 @@
+version: "1.0"
+services:
+  db:
+    container_name: 'main_db'
+    image: postgres:14.1-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=nikita
+      - POSTGRES_PASSWORD=12345
+      - POSTGRES_DB=main_db
+    ports:
+      - "5431:5432"
+    networks:
+      - custom
+#    volumes:
+#      # переменная db-data хранит путь, в котором данные контейнера хранятся в гостевой системе
+#      - db-data: /var/lib/postgresql/data
+  culta_backend_fa:
+    container_name: culta_backend_fa
+    image: culta_backend_fa
+    environment:
+      # прописываем @db - ссылаемся на контейнер db
+      REAL_DATABASE_URL: "postgresql+asyncpg://nikita:12345@main_db:5432/main_db"
+#      зависимости, без которых не будет поднят контейнер
+#    depends_on:
+#      - db
+#      - alembic_migrations
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    networks:
+      - custom
+networks:
+  custom:
+    driver: bridge
