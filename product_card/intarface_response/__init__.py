@@ -1,0 +1,3 @@
+from product_card.intarface_response.create_product_card_response import CreateProductCardResponse
+from product_card.intarface_response.get_product_card_response import GetProductCardResponse
+

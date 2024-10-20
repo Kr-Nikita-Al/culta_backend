@@ -3,3 +3,5 @@ from company.interfaces_response.create_company_response import CreateCompanyRes
 from company.interfaces_response.get_all_companies_response import GetAllCompanyResponse
 from company.interfaces_response.delete_company_response import DeleteCompanyResponse
 from company.interfaces_response.update_company_response import UpdateCompanyResponse
+from company.interfaces_response.get_company_products_response import GetAllCompanyProductsResponse
+

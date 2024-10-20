@@ -1,0 +1,1 @@
+from product_card.interface_request.create_product_card_request import CreateProductCardRequest

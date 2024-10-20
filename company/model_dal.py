@@ -4,8 +4,10 @@ from uuid import UUID
 
 from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
-from company.models.model_db import CompanyDB
+from db import CompanyDB, ProductCardDB
+from product_card.intarface_response import GetProductCardResponse
 
 
 class CompanyDal:
@@ -61,6 +63,14 @@ class CompanyDal:
         companies_row = res.scalars().all()
         if companies_row is not None:
             return companies_row
+        return None
+
+    async def get_company_products_by_id(self, company_id: UUID) -> Union[List[GetProductCardResponse], None]:
+        query = select(ProductCardDB).where(ProductCardDB.company_id == company_id)
+        res = await self.db_session.execute(query)
+        products_row = res.scalars().all()
+        if products_row is not None:
+            return products_row
         return None
 
     async def update_company(self, company_id: UUID, **kwargs) -> Union[UUID, None]:

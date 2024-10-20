@@ -2,8 +2,8 @@ from typing import Union, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from company.models.model_dal import CompanyDal
-from company.models.model_db import CompanyDB
+from company.model_dal import CompanyDal
+from db import CompanyDB
 
 
 async def __get_all_companies(session: AsyncSession) -> Union[List[CompanyDB], None]:

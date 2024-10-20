@@ -1,0 +1,2 @@
+from product_card.api_handlers import product_card_router
+

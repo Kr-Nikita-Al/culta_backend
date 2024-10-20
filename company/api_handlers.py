@@ -5,10 +5,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.actions import __create_company, __delete_company, __get_all_companies, __get_company_by_id, \
-    __update_company_by_id
+    __update_company_by_id, __get_company_products_by_id
 from company.interface_request import CreateCompanyRequest, UpdateCompanyRequest
 from company.interfaces_response import CreateCompanyResponse, DeleteCompanyResponse, GetAllCompanyResponse, \
-    GetCompanyResponse, UpdateCompanyResponse
+    GetCompanyResponse, UpdateCompanyResponse,  GetAllCompanyProductsResponse
 from db.session import get_db
 
 from fastapi import APIRouter
@@ -42,6 +42,16 @@ async def get_company_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found or was deleted before'.format(company_id))
     return company
+
+
+@company_router.get('/get_products_by_id', response_model=GetAllCompanyProductsResponse)
+async def get_company_products_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)) -> GetAllCompanyProductsResponse:
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    products = await __get_company_products_by_id(company_id, db)
+    return GetAllCompanyProductsResponse(products=products)
 
 
 @company_router.get('/get_all', response_model=GetAllCompanyResponse)
