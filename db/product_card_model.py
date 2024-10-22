@@ -16,7 +16,6 @@ from utils.constants import EMPTY_UUID
 
 class ProductCardDB(Base):
     __tablename__ = 'product_card'
-
     product_card_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Properties
@@ -53,11 +52,11 @@ class ProductCardDB(Base):
     is_hotness = Column(Boolean, default=False)
 
     # Connection fields
-    company_id = Column(ForeignKey('company.company_id'), primary_key=True)
+    company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)
     # company = relationship("CompanyDB", backref="product_cards")
     company_group_id = Column(Integer, default=-1)
-    product_image_id = Column(Integer, default=EMPTY_UUID)
-    icon_image_id = Column(Integer, default=EMPTY_UUID)
+    product_image_id = Column(Integer, default=-1)
+    icon_image_id = Column(Integer, default=-1)
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

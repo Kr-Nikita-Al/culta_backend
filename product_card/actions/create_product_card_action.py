@@ -13,8 +13,8 @@ async def __create_product_card(product_card_body: CreateProductCardRequest, ses
         )
         return CreateProductCardResponse(
             company_id=product_card_db.company_id,
-            product_card_id=product_card_db.product_card_id,
             title=product_card_db.title,
+            product_card_id=product_card_db.product_card_id,
             sub_title=product_card_db.sub_title,
             header=product_card_db.header,
             description=product_card_db.description,

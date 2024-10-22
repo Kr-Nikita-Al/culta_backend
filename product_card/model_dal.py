@@ -17,14 +17,14 @@ class ProductCardDal:
         query = select(CompanyDB).where(CompanyDB.company_id == company_id,
                                         CompanyDB.is_active == True)
         res = await self.db_session.execute(query)
-        company_row = res.fetchone()
-        if company_row is not None:
-            company_for_adding = company_row[0].company_id
+        product_card_row = res.fetchone()
+        if product_card_row is not None:
+            company_for_adding = product_card_row[0].company_id
         else:
             raise HTTPException(status_code=404,
                                 detail='Company with id {0} was not exit'.format(company_id))
 
-        new_company = ProductCardDB(
+        new_product_card = ProductCardDB(
             company_id=company_for_adding,
             title=kwargs["title"],
             sub_title=kwargs["sub_title"],
@@ -59,6 +59,6 @@ class ProductCardDal:
             product_image_id=kwargs["product_image_id"],
             icon_image_id=kwargs["icon_image_id"]
         )
-        self.db_session.add(new_company)
+        self.db_session.add(new_product_card)
         await self.db_session.flush()
-        return new_company
+        return new_product_card

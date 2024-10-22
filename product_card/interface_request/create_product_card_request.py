@@ -35,5 +35,5 @@ class CreateProductCardRequest(BaseModel):
     is_sharpness: Optional[StrictBool]
     is_hotness: Optional[StrictBool]
     company_group_id: Optional[conint()]
-    product_image_id: Optional[constr()]
-    icon_image_id: Optional[constr()]
+    product_image_id: Optional[conint()]
+    icon_image_id: Optional[conint()]

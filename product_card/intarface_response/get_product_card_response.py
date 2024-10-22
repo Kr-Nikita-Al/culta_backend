@@ -7,8 +7,7 @@ from utils.base_model_response import BaseModelResponse
 
 class GetProductCardResponse(BaseModelResponse):
     product_card_id: UUID
-    title: Optional[str]
-    product_card_id: UUID
+    company_id: UUID
     title: str
     sub_title: str
     header: str
@@ -39,8 +38,8 @@ class GetProductCardResponse(BaseModelResponse):
     carbohydrates: int
     cooking_time: int
     company_group_id: int
-    product_image_id: UUID
-    icon_image_id: UUID
+    product_image_id: int
+    icon_image_id: int
     creator_id: UUID
     updater_id: UUID
     time_created: datetime

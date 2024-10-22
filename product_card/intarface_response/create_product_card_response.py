@@ -38,8 +38,8 @@ class CreateProductCardResponse(BaseModelResponse):
     carbohydrates: int
     cooking_time: int
     company_group_id: int
-    product_image_id: UUID
-    icon_image_id: UUID
+    product_image_id: int
+    icon_image_id: int
     creator_id: UUID
     updater_id: UUID
     time_created: datetime
