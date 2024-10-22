@@ -42,6 +42,7 @@ async def __create_product_card(product_card_body: CreateProductCardRequest, ses
             single_product_type=product_card_db.single_product_type,
             is_sharpness=product_card_db.is_sharpness,
             is_hotness=product_card_db.is_hotness,
+            is_active=product_card_db.is_active,
             company_group_id=product_card_db.company_group_id,
             product_image_id=product_card_db.product_image_id,
             icon_image_id=product_card_db.icon_image_id,

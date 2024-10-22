@@ -50,6 +50,7 @@ class ProductCardDB(Base):
     single_product_type = Column(Boolean, default=False)
     is_sharpness = Column(Boolean, default=False)
     is_hotness = Column(Boolean, default=False)
+    is_active = Column(Boolean, default=True)
 
     # Connection fields
     company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)

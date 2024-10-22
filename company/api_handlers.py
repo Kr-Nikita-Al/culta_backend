@@ -27,7 +27,7 @@ async def delete_company(company_id: UUID, db: AsyncSession = Depends(get_db)) -
     if company_for_deletion is None:
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found'.format(company_id))
-    # Попытка удалить пользователя
+    # Попытка удалить компанию
     deleted_company_id = await __delete_company(company_id, db)
     if deleted_company_id is None:
         raise HTTPException(status_code=404,

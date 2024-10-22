@@ -49,7 +49,7 @@ class CompanyDal:
             return deleted_company_id_row[0]
         return None
 
-    async def get_user_by_id(self, company_id: UUID) -> Union[CompanyDB, None]:
+    async def get_company_by_id(self, company_id: UUID) -> Union[CompanyDB, None]:
         query = select(CompanyDB).where(CompanyDB.company_id == company_id)
         res = await self.db_session.execute(query)
         company_row = res.fetchone()
@@ -66,7 +66,8 @@ class CompanyDal:
         return None
 
     async def get_company_products_by_id(self, company_id: UUID) -> Union[List[GetProductCardResponse], None]:
-        query = select(ProductCardDB).where(ProductCardDB.company_id == company_id)
+        query = select(ProductCardDB).where(ProductCardDB.company_id == company_id,
+                                            CompanyDB.is_active == True)
         res = await self.db_session.execute(query)
         products_row = res.scalars().all()
         if products_row is not None:

@@ -24,6 +24,7 @@ class GetProductCardResponse(BaseModelResponse):
     single_product_type: bool
     is_sharpness: bool
     is_hotness: bool
+    is_active: bool
     count_number: int
     price_field_1: int
     price_field_2: int

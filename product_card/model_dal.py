@@ -1,6 +1,9 @@
+from typing import Union
+from uuid import UUID
+
 from fastapi import HTTPException
 
-from sqlalchemy import select
+from sqlalchemy import select, and_, update
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,18 +17,18 @@ class ProductCardDal:
     async def create_product_card(self, kwargs) -> ProductCardDB:
 
         company_id = kwargs["company_id"]
-        query = select(CompanyDB).where(CompanyDB.company_id == company_id,
-                                        CompanyDB.is_active == True)
+        query = select(CompanyDB).where(and_(CompanyDB.company_id == company_id,
+                                             CompanyDB.is_active == True))
         res = await self.db_session.execute(query)
-        product_card_row = res.fetchone()
-        if product_card_row is not None:
-            company_for_adding = product_card_row[0].company_id
+        company_row = res.fetchone()
+        if company_row is not None:
+            company_id_for_adding = company_row[0].company_id
         else:
             raise HTTPException(status_code=404,
                                 detail='Company with id {0} was not exit'.format(company_id))
 
         new_product_card = ProductCardDB(
-            company_id=company_for_adding,
+            company_id=company_id_for_adding,
             title=kwargs["title"],
             sub_title=kwargs["sub_title"],
             header=kwargs["header"],
@@ -55,6 +58,7 @@ class ProductCardDal:
             single_product_type=kwargs["single_product_type"],
             is_sharpness=kwargs["is_sharpness"],
             is_hotness=kwargs["is_hotness"],
+            is_active=kwargs["is_active"],
             company_group_id=kwargs["company_group_id"],
             product_image_id=kwargs["product_image_id"],
             icon_image_id=kwargs["icon_image_id"]
@@ -62,3 +66,22 @@ class ProductCardDal:
         self.db_session.add(new_product_card)
         await self.db_session.flush()
         return new_product_card
+
+    async def delete_product_card(self, product_card_id: UUID) -> Union[UUID, None]:
+        query = update(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,
+                                                 ProductCardDB.is_active == True))\
+                              .values(is_active=False)\
+                              .returning(ProductCardDB.product_card_id)
+        res = await self.db_session.execute(query)
+        deleted_product_card_id_row = res.fetchone()
+        if deleted_product_card_id_row is not None:
+            return deleted_product_card_id_row[0]
+        return None
+
+    async def get_product_card_by_id(self, product_card_id: UUID) -> Union[ProductCardDB, None]:
+        query = select(ProductCardDB).where(ProductCardDB.product_card_id == product_card_id)
+        res = await self.db_session.execute(query)
+        product_card_row = res.fetchone()
+        if product_card_row is not None:
+            return product_card_row[0]
+        return None
