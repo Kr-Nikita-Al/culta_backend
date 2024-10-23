@@ -4,12 +4,13 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.model_dal import CompanyDal
+from db import CompanyDB
 
 
-async def __delete_company(company_id: UUID, session: AsyncSession) -> Union[UUID, None]:
+async def __get_company_products_by_id(company_id: UUID, session: AsyncSession) -> Union[CompanyDB, None]:
     async with session.begin():
         company_dal = CompanyDal(session)
-        deleted_company_id = await company_dal.delete_company(
+        company = await company_dal.get_company_products_by_id(
             company_id=company_id
         )
-        return deleted_company_id
+        return company

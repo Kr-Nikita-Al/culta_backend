@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from company.models.model_dal import CompanyDal
+from company.model_dal import CompanyDal
 from company.interface_request import CreateCompanyRequest
 from company.interfaces_response import CreateCompanyResponse
 

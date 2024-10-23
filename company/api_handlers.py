@@ -5,10 +5,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.actions import __create_company, __delete_company, __get_all_companies, __get_company_by_id, \
-    __update_company_by_id
+    __update_company_by_id, __get_company_products_by_id
 from company.interface_request import CreateCompanyRequest, UpdateCompanyRequest
 from company.interfaces_response import CreateCompanyResponse, DeleteCompanyResponse, GetAllCompanyResponse, \
-    GetCompanyResponse, UpdateCompanyResponse
+    GetCompanyResponse, UpdateCompanyResponse,  GetAllCompanyProductsResponse
 from db.session import get_db
 
 from fastapi import APIRouter
@@ -27,7 +27,7 @@ async def delete_company(company_id: UUID, db: AsyncSession = Depends(get_db)) -
     if company_for_deletion is None:
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found'.format(company_id))
-    # Попытка удалить пользователя
+    # Попытка удалить компанию
     deleted_company_id = await __delete_company(company_id, db)
     if deleted_company_id is None:
         raise HTTPException(status_code=404,
@@ -44,6 +44,16 @@ async def get_company_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)
     return company
 
 
+@company_router.get('/get_products_by_id', response_model=GetAllCompanyProductsResponse)
+async def get_company_products_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)) -> GetAllCompanyProductsResponse:
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    products = await __get_company_products_by_id(company_id, db)
+    return GetAllCompanyProductsResponse(products=products)
+
+
 @company_router.get('/get_all', response_model=GetAllCompanyResponse)
 async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompanyResponse:
     companies = await __get_all_companies(db)
@@ -57,12 +67,12 @@ async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompany
 async def update_company_by_id(company_id: UUID,
                                body: UpdateCompanyRequest,
                                db: AsyncSession = Depends(get_db)) -> UpdateCompanyResponse:
-    # Проверка на существование обновляемого пользователя
+    # Проверка на существование обновляемой компании
     company_for_update = await __get_company_by_id(company_id=company_id, session=db)
     if company_for_update is None:
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found'.format(company_id))
-    # Попытка обновить данные пользователя
+    # Попытка обновить данные компании
     update_company_params = body.dict(exclude_none=True)  # exclude_none, чтобы удалить незаполненные поля
     if update_company_params == {}:
         raise HTTPException(status_code=422, detail='All fields are empty')
