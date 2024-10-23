@@ -5,9 +5,9 @@ from utils.base_model_response import BaseModelResponse
 
 
 class CreateProductCardResponse(BaseModelResponse):
+    product_card_id: UUID
     company_id: UUID
     title: str
-    product_card_id: UUID
     title: str
     sub_title: str
     header: str

@@ -67,12 +67,12 @@ async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompany
 async def update_company_by_id(company_id: UUID,
                                body: UpdateCompanyRequest,
                                db: AsyncSession = Depends(get_db)) -> UpdateCompanyResponse:
-    # Проверка на существование обновляемого пользователя
+    # Проверка на существование обновляемой компании
     company_for_update = await __get_company_by_id(company_id=company_id, session=db)
     if company_for_update is None:
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found'.format(company_id))
-    # Попытка обновить данные пользователя
+    # Попытка обновить данные компании
     update_company_params = body.dict(exclude_none=True)  # exclude_none, чтобы удалить незаполненные поля
     if update_company_params == {}:
         raise HTTPException(status_code=422, detail='All fields are empty')

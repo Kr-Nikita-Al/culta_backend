@@ -66,8 +66,8 @@ class CompanyDal:
         return None
 
     async def get_company_products_by_id(self, company_id: UUID) -> Union[List[GetProductCardResponse], None]:
-        query = select(ProductCardDB).where(ProductCardDB.company_id == company_id,
-                                            CompanyDB.is_active == True)
+        query = select(ProductCardDB).where(and_(ProductCardDB.company_id == company_id,
+                                                 ProductCardDB.is_active == True))
         res = await self.db_session.execute(query)
         products_row = res.scalars().all()
         if products_row is not None:

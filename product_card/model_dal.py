@@ -85,3 +85,14 @@ class ProductCardDal:
         if product_card_row is not None:
             return product_card_row[0]
         return None
+
+    async def update_product_card(self, product_card_id: UUID, **kwargs) -> Union[UUID, None]:
+        query = update(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,
+                                                 ProductCardDB.is_active == True))\
+                                 .values(kwargs)\
+                                 .returning(ProductCardDB.product_card_id)
+        res = await self.db_session.execute(query)
+        update_product_card_id_row = res.fetchone()
+        if update_product_card_id_row is not None:
+            return update_product_card_id_row[0]
+        return None
