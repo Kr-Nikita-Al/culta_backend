@@ -2,7 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.model_dal import CompanyDal
 from company.interface_request import CreateCompanyRequest
-from company.interfaces_response import CreateCompanyResponse
+from company.interface_response import CreateCompanyResponse
 
 
 async def __create_company(company_body: CreateCompanyRequest, session: AsyncSession) -> CreateCompanyResponse:

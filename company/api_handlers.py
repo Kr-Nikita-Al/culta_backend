@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from company.actions import __create_company, __delete_company, __get_all_companies, __get_company_by_id, \
     __update_company_by_id, __get_company_products_by_id
 from company.interface_request import CreateCompanyRequest, UpdateCompanyRequest
-from company.interfaces_response import CreateCompanyResponse, DeleteCompanyResponse, GetAllCompanyResponse, \
+from company.interface_response import CreateCompanyResponse, DeleteCompanyResponse, GetAllCompanyResponse, \
     GetCompanyResponse, UpdateCompanyResponse,  GetAllCompanyProductsResponse
 from db.session import get_db
 
