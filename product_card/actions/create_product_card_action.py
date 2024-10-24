@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from product_card.intarface_response import CreateProductCardResponse
+from product_card.interface_response import CreateProductCardResponse
 from product_card.interface_request import CreateProductCardRequest
 from product_card.model_dal import ProductCardDal
 

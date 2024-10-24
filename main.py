@@ -3,6 +3,7 @@ from fastapi import FastAPI, APIRouter
 
 import settings
 from company import company_router
+from navigations.item import item_router
 from product_card import product_card_router
 from utils.ping_api import service_router
 
@@ -20,6 +21,7 @@ main_api_router = APIRouter()
 main_api_router.include_router(service_router, prefix="/ping", tags=["ping"])
 main_api_router.include_router(company_router, prefix="/company", tags=["company"])
 main_api_router.include_router(product_card_router, prefix="/product_card", tags=["product_card"])
+main_api_router.include_router(item_router, prefix="/item_navigation", tags=["item_navigation"])
 
 # Добавляем роутер в приложение
 app.include_router(main_api_router)

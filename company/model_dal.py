@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from db import CompanyDB, ProductCardDB
-from product_card.intarface_response import GetProductCardResponse
+from product_card.interface_response import GetProductCardResponse
 
 
 class CompanyDal:
