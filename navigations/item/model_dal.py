@@ -3,7 +3,7 @@ from uuid import UUID
 
 from fastapi import HTTPException
 
-from sqlalchemy import select, and_, update
+from sqlalchemy import select, and_, update, delete
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
@@ -39,9 +39,25 @@ class ItemDal:
         return new_item
 
     async def get_item_by_id(self, item_id: UUID) -> Union[ItemDB, None]:
-        res = await self.db_session.execute(select(ItemDB).where(ItemDB.item_id == item_id).options(joinedload(ItemDB.product_card_info)))
+        query = select(ItemDB).where(ItemDB.item_id == item_id).options(joinedload(ItemDB.product_card_info))
+        res = await self.db_session.execute(query)
         item_row = res.scalars().first()
         if item_row is not None:
             return item_row
+        return None
+
+    async def delete_company(self, item_id: UUID) -> Union[ItemDB, None]:
+        query = delete(ItemDB).where(ItemDB.item_id == item_id)
+        await self.db_session.execute(query)
+        return item_id
+
+    async def update_item(self, item_id: UUID, **kwargs) -> Union[UUID, None]:
+        query = update(ItemDB).where(ItemDB.item_id == item_id)\
+                              .values(kwargs)\
+                              .returning(ItemDB.item_id)
+        res = await self.db_session.execute(query)
+        update_item_id_row = res.fetchone()
+        if update_item_id_row is not None:
+            return update_item_id_row[0]
         return None
 

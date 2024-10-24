@@ -58,6 +58,7 @@ class ProductCardDB(Base):
     product_image_id = Column(Integer, default=-1)
     icon_image_id = Column(Integer, default=-1)
 
+    # Navigation fields
     item = relationship("ItemDB", back_populates="product_card_info")
 
     # Technical fields
