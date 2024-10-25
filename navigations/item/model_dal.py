@@ -47,12 +47,13 @@ class ItemDal:
             return item_row
         return None
 
-    async def delete_company(self, item_id: UUID) -> Union[ItemDB, None]:
+    async def delete_item(self, item_id: UUID) -> UUID:
         query = delete(ItemDB).where(ItemDB.item_id == item_id)
         await self.db_session.execute(query)
         return item_id
 
     async def update_item(self, item_id: UUID, **kwargs) -> Union[UUID, None]:
+        # check params is uniq
         query = update(ItemDB).where(ItemDB.item_id == item_id)\
                               .values(kwargs)\
                               .returning(ItemDB.item_id)

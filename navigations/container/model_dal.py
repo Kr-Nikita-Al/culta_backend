@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import joinedload
 
 from db import ContainerDB, ItemDB
+from navigations.item.model_dal import ItemDal
 
 
 class ContainerDal:
@@ -35,18 +36,28 @@ class ContainerDal:
             return container_row
         return None
 
-    # async def delete_company(self, item_id: UUID) -> Union[ItemDB, None]:
-    #     query = delete(ItemDB).where(ItemDB.item_id == item_id)
-    #     await self.db_session.execute(query)
-    #     return item_id
-    #
-    # async def update_item(self, item_id: UUID, **kwargs) -> Union[UUID, None]:
-    #     query = update(ItemDB).where(ItemDB.item_id == item_id)\
-    #                           .values(kwargs)\
-    #                           .returning(ItemDB.item_id)
-    #     res = await self.db_session.execute(query)
-    #     update_item_id_row = res.fetchone()
-    #     if update_item_id_row is not None:
-    #         return update_item_id_row[0]
-    #     return None
+    async def delete_container(self, container_id: UUID) -> UUID:
+        container = await self.get_container_by_id(container_id)
+        item_list = [item.item_id for item in container.items]
+
+        # drop items
+        if len(item_list) > 0:
+            item_dal = ItemDal(self.db_session)
+            for item_id in item_list:
+                _ = await item_dal.delete_item(
+                    item_id=item_id
+                )
+        query = delete(ContainerDB).where(ContainerDB.container_id == container_id)
+        await self.db_session.execute(query)
+        return container_id
+
+    async def update_container(self, container_id: UUID, **kwargs) -> Union[UUID, None]:
+        query = update(ContainerDB).where(ContainerDB.container_id == container_id)\
+                                   .values(kwargs)\
+                                   .returning(ContainerDB.container_id)
+        res = await self.db_session.execute(query)
+        update_container_id_row = res.fetchone()
+        if update_container_id_row is not None:
+            return update_container_id_row[0]
+        return None
 
