@@ -23,4 +23,8 @@ class ItemDB(Base):
 
     # Connection fields
     product_card_id = Column(ForeignKey("product_card.product_card_id"), primary_key=True, nullable=False)
-    product_card_info = relationship("ProductCardDB", back_populates="item")
+    product_card_info = relationship("ProductCardDB", back_populates="item", lazy="joined")
+
+    container_id = Column(ForeignKey("container.container_id"), primary_key=True, nullable=False)
+    container_info = relationship("ContainerDB", back_populates="items", lazy="joined")
+

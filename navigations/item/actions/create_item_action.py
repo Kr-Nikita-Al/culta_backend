@@ -13,6 +13,7 @@ async def __create_item(item_body: CreateItemRequest, session: AsyncSession) -> 
         )
         return CreateItemResponse(
             item_id=item_db.item_id,
+            container_id=item_db.container_id,
             product_card_id=item_db.product_card_id,
             item_row_order=item_db.item_row_order,
             item_column_order=item_db.item_column_order,
