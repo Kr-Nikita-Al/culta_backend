@@ -59,7 +59,7 @@ class ProductCardDB(Base):
     icon_image_id = Column(Integer, default=-1)
 
     # Navigation fields
-    item = relationship("ItemDB", back_populates="product_card_info")
+    item = relationship("ItemDB", back_populates="product_card_info", lazy="joined")
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

@@ -21,15 +21,16 @@ class ItemDal:
         query = select(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,
                                                  ProductCardDB.is_active == True))
         res = await self.db_session.execute(query)
-        product_card_row = res.fetchone()
+        product_card_row = res.unique().fetchone()
         if product_card_row is not None:
             product_card_id_for_adding = product_card_row[0].product_card_id
         else:
             raise HTTPException(status_code=404,
                                 detail='Product card with id {0} was not exit'.format(product_card_id))
-
+        # check existing container by container_id
         new_item = ItemDB(
             product_card_id=product_card_id_for_adding,
+            container_id=kwargs["container_id"],
             item_row_order=kwargs["item_row_order"],
             item_column_order=kwargs["item_column_order"],
             item_type=kwargs["item_type"],
@@ -46,12 +47,13 @@ class ItemDal:
             return item_row
         return None
 
-    async def delete_company(self, item_id: UUID) -> Union[ItemDB, None]:
+    async def delete_item(self, item_id: UUID) -> UUID:
         query = delete(ItemDB).where(ItemDB.item_id == item_id)
         await self.db_session.execute(query)
         return item_id
 
     async def update_item(self, item_id: UUID, **kwargs) -> Union[UUID, None]:
+        # check params is uniq
         query = update(ItemDB).where(ItemDB.item_id == item_id)\
                               .values(kwargs)\
                               .returning(ItemDB.item_id)
