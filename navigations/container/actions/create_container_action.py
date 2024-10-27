@@ -13,7 +13,7 @@ async def __create_container(container_body: CreateContainerRequest, session: As
         )
         return CreateContainerResponse(
             container_id=container_db.container_id,
-            # screen_id=.screen_id,
+            screen_id=container_db.screen_id,
             container_title=container_db.container_title,
             container_sub_title=container_db.container_sub_title,
             container_type=container_db.container_type,

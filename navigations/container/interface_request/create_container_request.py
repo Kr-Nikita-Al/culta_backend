@@ -4,7 +4,7 @@ from pydantic import BaseModel, constr, conint
 
 
 class CreateContainerRequest(BaseModel):
-    # screen_id: constr()
+    screen_id: constr()
     container_title: Optional[constr()]
     container_sub_title: Optional[constr()]
     container_type: Optional[constr()]

@@ -3,7 +3,7 @@ from fastapi import FastAPI, APIRouter
 
 import settings
 from company import company_router
-from navigations import item_router, container_router
+from navigations import item_router, container_router, screen_router
 from product_card import product_card_router
 from utils.ping_api import service_router
 
@@ -23,6 +23,7 @@ main_api_router.include_router(company_router, prefix="/company", tags=["company
 main_api_router.include_router(product_card_router, prefix="/product_card", tags=["product_card"])
 main_api_router.include_router(item_router, prefix="/item_navigation", tags=["item_navigation"])
 main_api_router.include_router(container_router, prefix="/container_navigation", tags=["container_navigation"])
+main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
 
 # Добавляем роутер в приложение
 app.include_router(main_api_router)
