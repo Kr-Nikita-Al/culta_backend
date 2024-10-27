@@ -14,7 +14,7 @@ class CreateCompanyResponse(BaseModelResponse):
     email: EmailStr
     is_active: bool
     order_number: int
-    main_screen_id: int
+    basic_screen_id: UUID
     group_id: int
     company_image: str
     company_icon: str
