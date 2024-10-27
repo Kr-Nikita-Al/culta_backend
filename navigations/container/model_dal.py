@@ -19,6 +19,7 @@ class ContainerDal:
     async def create_container(self, kwargs) -> ContainerDB:
         # check existing screen by screen_id
         new_container = ContainerDB(
+            screen_id=kwargs["screen_id"],
             container_title=kwargs["container_title"],
             container_sub_title=kwargs["container_sub_title"],
             container_type=kwargs["container_type"],

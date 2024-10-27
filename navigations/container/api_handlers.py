@@ -28,7 +28,7 @@ async def get_container_by_id(container_id: UUID, db: AsyncSession = Depends(get
 
 
 @container_router.delete("/delete", response_model=DeleteContainerResponse)
-async def delete_item(container_id: UUID, db: AsyncSession = Depends(get_db)) -> DeleteContainerResponse:
+async def delete_container(container_id: UUID, db: AsyncSession = Depends(get_db)) -> DeleteContainerResponse:
     container_for_deletion = await __get_container_by_id(container_id=container_id, session=db)
     if container_for_deletion is None:
         raise HTTPException(status_code=404,
@@ -42,7 +42,7 @@ async def delete_item(container_id: UUID, db: AsyncSession = Depends(get_db)) ->
 
 
 @container_router.patch('/update_by_id', response_model=UpdateContainerResponse)
-async def update_item_by_id(container_id: UUID,
+async def update_container_by_id(container_id: UUID,
                             body: UpdateContainerRequest,
                             db: AsyncSession = Depends(get_db)) -> UpdateContainerResponse:
     # Проверка на существование обновляемый container

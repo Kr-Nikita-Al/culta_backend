@@ -6,6 +6,10 @@ from sqlalchemy.orm import relationship
 
 from db.base_model import Base
 
+###########################
+# БЛОК ОПИСАНИЯ МОДЕЛИ БД #
+###########################
+
 
 class ContainerDB(Base):
     __tablename__ = 'container'
@@ -19,3 +23,6 @@ class ContainerDB(Base):
 
     # Connection fields
     items = relationship("ItemDB", back_populates="container_info", lazy="joined")
+
+    screen_id = Column(ForeignKey("screen.screen_id"), primary_key=True, nullable=False)
+    screen_info = relationship("ScreenDB", back_populates="containers", lazy="joined")

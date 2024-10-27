@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, time
 from uuid import UUID
 
 from pydantic import EmailStr
@@ -22,7 +22,7 @@ class CreateCompanyResponse(BaseModelResponse):
     work_state: bool
     creator_id: UUID
     updater_id: UUID
-    time_created: datetime.datetime
-    time_updated: datetime.datetime
-    start_time: datetime.time
-    over_time: datetime.time
+    time_created: datetime
+    time_updated: datetime
+    start_time: time
+    over_time: time

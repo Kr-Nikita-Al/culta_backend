@@ -1,0 +1,5 @@
+from navigations.screen.interface_response.create_screen_response import CreateScreenResponse
+from navigations.screen.interface_response.get_screen_response import GetScreenResponse
+from navigations.screen.interface_response.update_screen_response import UpdateScreenResponse
+from navigations.screen.interface_response.delete_screen_response import DeleteScreenResponse
+
