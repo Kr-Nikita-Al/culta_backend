@@ -29,7 +29,7 @@ class CompanyDB(Base):
     order_number = Column(Integer, default=-1)
 
     # Connection fields
-    main_screen_id = Column(Integer, default=-1)
+    basic_screen_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     group_id = Column(Integer, default=-1)
     company_image = Column(String, default="")
     company_icon = Column(String, default="")

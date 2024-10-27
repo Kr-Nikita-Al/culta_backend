@@ -12,7 +12,6 @@ class CreateCompanyRequest(BaseModel):
     phone: constr()
     email: EmailStr
     order_number: conint()
-    main_screen_id: conint()
     group_id: conint()
     company_image: constr()
     company_icon: constr()

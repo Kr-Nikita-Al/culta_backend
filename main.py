@@ -12,7 +12,7 @@ from utils.ping_api import service_router
 #############################
 
 # Создание приложения
-app = FastAPI(title="culta_backend_fa")
+app = FastAPI(title="culta_backend")
 
 # Создаем основной роутер
 main_api_router = APIRouter()
