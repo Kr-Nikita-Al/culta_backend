@@ -55,8 +55,8 @@ class ProductCardDB(Base):
     # Connection fields
     company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)
     company_group_id = Column(Integer, default=-1)
-    product_image_id = Column(Integer, default=-1)
-    icon_image_id = Column(Integer, default=-1)
+    image_product_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
+    image_icon_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
 
     # Navigation fields
     item = relationship("ItemDB", back_populates="product_card_info", lazy="joined")

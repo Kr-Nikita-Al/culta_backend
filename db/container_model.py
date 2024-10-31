@@ -21,7 +21,7 @@ class ContainerDB(Base):
     container_type = Column(String(35), default='')
     container_order = Column(Integer, default=0)
 
-    # Connection fields
+    # Navigation fields
     items = relationship("ItemDB", back_populates="container_info", lazy="joined")
 
     screen_id = Column(ForeignKey("screen.screen_id"), primary_key=True, nullable=False)
