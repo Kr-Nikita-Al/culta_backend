@@ -81,4 +81,7 @@ async def update_company_by_id(company_id: UUID,
                                                           company_id=company_id, session=db)
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
+    if updated_company_id is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} was deleted'.format(company_id))
     return UpdateCompanyResponse(updated_company_id=updated_company_id)

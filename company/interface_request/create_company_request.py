@@ -1,4 +1,5 @@
 from datetime import time
+from typing import Optional
 
 from fastapi import HTTPException
 from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool
@@ -8,13 +9,13 @@ from utils import LETTER_MATCH_PATTERN_PHONE
 
 class CreateCompanyRequest(BaseModel):
     company_name: constr(min_length=1, max_length=20)
-    address: constr(min_length=1, max_length=50)
+    address: Optional[constr(min_length=1, max_length=50)]
     phone: constr()
     email: EmailStr
-    order_number: conint()
-    group_id: conint()
-    company_image: constr()
-    company_icon: constr()
+    order_number: Optional[conint()]
+    group_id: Optional[conint()]
+    image_picture_id: Optional[constr()]
+    image_icon_id: Optional[constr()]
     age_limit: StrictBool
     work_state: StrictBool
     start_time: time

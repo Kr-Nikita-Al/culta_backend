@@ -1,7 +1,9 @@
+from typing import List
 from uuid import UUID
-import datetime
+from datetime import datetime, time
 from pydantic import EmailStr
 
+from image.interface_response import GetImageResponse
 from utils.base_model_response import BaseModelResponse
 
 
@@ -15,13 +17,14 @@ class GetCompanyResponse(BaseModelResponse):
     order_number: int
     basic_screen_id: UUID
     group_id: int
-    company_image: str
-    company_icon: str
+    image_picture_id: UUID
+    image_icon_id: UUID
     age_limit: bool
     work_state: bool
     creator_id: UUID
     updater_id: UUID
-    time_created: datetime.datetime
-    time_updated: datetime.datetime
-    start_time: datetime.time
-    over_time: datetime.time
+    time_created: datetime
+    time_updated: datetime
+    start_time: time
+    over_time: time
+    images: List[GetImageResponse]

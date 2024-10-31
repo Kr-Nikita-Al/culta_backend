@@ -59,5 +59,8 @@ async def update_product_card_by_id(product_card_id: UUID,
                                                                     product_card_id=product_card_id, session=db)
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
+    if updated_product_card_id is None:
+        raise HTTPException(status_code=404,
+                            detail='Product card with id {0} was deleted'.format(product_card_id))
     return UpdateProductResponse(updated_product_card_id=updated_product_card_id)
 

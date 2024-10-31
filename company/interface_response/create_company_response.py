@@ -16,8 +16,8 @@ class CreateCompanyResponse(BaseModelResponse):
     order_number: int
     basic_screen_id: UUID
     group_id: int
-    company_image: str
-    company_icon: str
+    image_picture_id: UUID
+    image_icon_id: UUID
     age_limit: bool
     work_state: bool
     creator_id: UUID

@@ -36,6 +36,6 @@ class CreateProductCardRequest(BaseModel):
     is_hotness: Optional[StrictBool]
     is_active: Optional[StrictBool]
     company_group_id: Optional[conint()]
-    product_image_id: Optional[conint()]
-    icon_image_id: Optional[conint()]
+    image_product_id: Optional[constr()]
+    image_icon_id: Optional[constr()]
 

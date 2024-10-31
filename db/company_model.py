@@ -1,8 +1,9 @@
 import uuid
 import datetime
 
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, Time
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, Time, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
 
 from db.base_model import Base
 from utils.constants import EMPTY_UUID
@@ -31,8 +32,10 @@ class CompanyDB(Base):
     # Connection fields
     basic_screen_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     group_id = Column(Integer, default=-1)
-    company_image = Column(String, default="")
-    company_icon = Column(String, default="")
+
+    image_picture_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
+    image_icon_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
+    images = relationship("ImageDB", back_populates="company_info", lazy="joined")
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
