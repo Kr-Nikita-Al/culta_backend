@@ -24,6 +24,7 @@ class ScreenDB(Base):
 
     # Connection fields
     company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)
+    company_info = relationship("CompanyDB", back_populates="screens", lazy="joined")
     company_group_id = Column(Integer, default=-1)
 
     # Navigation fields

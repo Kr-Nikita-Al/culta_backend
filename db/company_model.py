@@ -37,6 +37,9 @@ class CompanyDB(Base):
     image_icon_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     images = relationship("ImageDB", back_populates="company_info", lazy="joined")
 
+    # Navigation fields
+    screens = relationship("ScreenDB", back_populates="company_info", lazy="joined")
+
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     updater_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
