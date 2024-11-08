@@ -4,10 +4,10 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from User.actions import _create_user, _delete_user, _get_user_by_id, \
+from user.actions import _create_user, _delete_user, _get_user_by_id, \
     _update_user
-from User.interfaces_request import CreateUserRequest, UpdateUserRequest
-from User.interfaces_response import CreateUserResponse, DeleteUserResponse, \
+from user.interfaces_request import CreateUserRequest, UpdateUserRequest
+from user.interfaces_response import CreateUserResponse, DeleteUserResponse, \
     GetUserResponse, UpdateUserResponse
 
 

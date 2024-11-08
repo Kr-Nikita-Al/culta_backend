@@ -1,9 +1,9 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from User.db.model_dal import UserDAL
-from User.interfaces_request.create_user_request import CreateUserRequest
-from User.interfaces_response.create_user_response import CreateUserResponse
-from hashing import Hasher
+from user.model_dal import UserDAL
+from user.interfaces_request.create_user_request import CreateUserRequest
+from user.interfaces_response.create_user_response import CreateUserResponse
+from utils.hashing import Hasher
 
 async def _create_user(user_body: CreateUserRequest, session: AsyncSession) -> CreateUserResponse:
     async with session.begin():

@@ -1,8 +1,8 @@
 from typing import Union
 from sqlalchemy.ext.asyncio import AsyncSession
-from Auth.actions.get_user_by_email_for_auth_action import get_user_by_email_for_auth
-from hashing import Hasher
-from User.db.model_db import UserDB
+from auth.actions.get_user_by_email_for_auth_action import get_user_by_email_for_auth
+from utils.hashing import Hasher
+from db.user_model import UserDB
 
 async def authenticate_user(
     email: str, password: str, db: AsyncSession

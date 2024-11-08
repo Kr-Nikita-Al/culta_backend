@@ -3,7 +3,7 @@ from datetime import time
 from fastapi import HTTPException
 from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool, condate
 
-from regex import LETTER_MATCH_PATTERN_PHONE, LETTER_MATCH_PATTERN_NAME
+from utils.regex import LETTER_MATCH_PATTERN_PHONE, LETTER_MATCH_PATTERN_NAME
 
 
 class CreateUserRequest(BaseModel):
@@ -21,7 +21,7 @@ class CreateUserRequest(BaseModel):
             )
         return value
 
-    @validator("name")
+    @validator("user_name")
     def validate_name(cls, value):
         if not LETTER_MATCH_PATTERN_NAME.match(value):
             raise HTTPException(
@@ -29,7 +29,7 @@ class CreateUserRequest(BaseModel):
             )
         return value
 
-    @validator("surname")
+    @validator("user_surname")
     def validate_surname(cls, value):
         if not LETTER_MATCH_PATTERN_NAME.match(value):
             raise HTTPException(

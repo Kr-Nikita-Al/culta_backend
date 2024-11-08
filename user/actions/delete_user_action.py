@@ -1,7 +1,7 @@
 from typing import Union
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from User.db.model_dal import UserDAL
+from user.model_dal import UserDAL
 
 async def _delete_user(user_id, session: AsyncSession) -> Union[UUID, None]:
     async with session.begin():

@@ -8,10 +8,10 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import settings
-from Auth.actions.authenticate_user_action import authenticate_user
-from schemas import Token
+from auth.actions.authenticate_user_action import authenticate_user
+from utils.schemas import Token
 from db.session import get_db
-from Auth.actions.create_access_token_action import create_access_token
+from auth.actions.create_access_token_action import create_access_token
 
 login_router = APIRouter()
 

@@ -1,8 +1,8 @@
 from typing import Union
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from User.db.model_dal import UserDAL
-from User.db.model_db import UserDB
+from user.model_dal import UserDAL
+from db.user_model import UserDB
 
 async def _get_user_by_id(user_id: UUID, session: AsyncSession) -> Union[UserDB, None]:
     async with session.begin():

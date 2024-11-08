@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from User.db.model_db import UserDB
+from db.user_model import UserDB
 
 class UserDAL:
     """Data Access Layer for operating user info"""
@@ -28,7 +28,7 @@ class UserDAL:
             phone=phone,
             email=email,
             hashed_password=hashed_password,
-            roles=roles,
+            # roles=roles,
         )
         self.db_session.add(new_user)
         await self.db_session.flush()

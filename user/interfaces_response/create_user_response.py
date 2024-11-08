@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import EmailStr
 
-from base_model_response import BaseModelResponse
+from utils.base_model_response import BaseModelResponse
 
 
 class CreateUserResponse(BaseModelResponse):
