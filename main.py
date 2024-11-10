@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI, APIRouter
 
 import settings
+from user import user_router
 from company import company_router
 from image import image_router
 from navigations import item_router, container_router, screen_router
@@ -20,6 +21,7 @@ main_api_router = APIRouter()
 
 # Добавляем роутеры моделей
 main_api_router.include_router(service_router, prefix="/ping", tags=["ping"])
+main_api_router.include_router(user_router, prefix="/user", tags=["user"])
 main_api_router.include_router(company_router, prefix="/company", tags=["company"])
 main_api_router.include_router(product_card_router, prefix="/product_card", tags=["product_card"])
 main_api_router.include_router(image_router, prefix="/image", tags=["image"])

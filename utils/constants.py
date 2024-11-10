@@ -1,3 +1,11 @@
 import uuid
+from enum import Enum
 
 EMPTY_UUID = uuid.UUID(int=0)
+
+
+class PortalRole(str, Enum):
+    ROLE_PORTAL_USER = 'ROLE_PORTAL_USER'
+    ROLE_PORTAL_STAFF = 'ROLE_PORTAL_STAFF'
+    ROLE_PORTAL_ADMIN = 'ROLE_PORTAL_ADMIN'
+    ROLE_PORTAL_SUPER_ADMIN = 'ROLE_PORTAL_SUPER_ADMIN'
