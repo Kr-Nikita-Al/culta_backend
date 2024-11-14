@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI, APIRouter
 
 import settings
+from auth import login_router
 from user import user_router
 from company import company_router
 from image import image_router
@@ -28,9 +29,10 @@ main_api_router.include_router(image_router, prefix="/image", tags=["image"])
 main_api_router.include_router(item_router, prefix="/item_navigation", tags=["item_navigation"])
 main_api_router.include_router(container_router, prefix="/container_navigation", tags=["container_navigation"])
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
+main_api_router.include_router(login_router, prefix="/login", tags=["login"])
 
 # Добавляем роутер в приложение
 app.include_router(main_api_router)
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=settings.APP_PORT)
+    uvicorn.run(app, host="127.0.0.1", port=settings.APP_PORT)
