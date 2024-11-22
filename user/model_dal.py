@@ -9,6 +9,7 @@ from db.user_model import UserDB
 from utils.constants import PortalRole
 from fastapi import HTTPException
 
+
 class UserDAL:
     """Data Access Layer for operating user info"""
 
@@ -20,7 +21,7 @@ class UserDAL:
     ) -> UserDB:
         if await self.get_user_by_email(email):
             raise HTTPException(status_code=404,
-                            detail='User with email {0} already exists'.format(email))
+                                detail='User with email {0} already exists'.format(email))
         new_user = UserDB(
             name=name,
             surname=surname,
