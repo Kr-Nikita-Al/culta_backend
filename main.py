@@ -29,7 +29,7 @@ main_api_router.include_router(image_router, prefix="/image", tags=["image"])
 main_api_router.include_router(item_router, prefix="/item_navigation", tags=["item_navigation"])
 main_api_router.include_router(container_router, prefix="/container_navigation", tags=["container_navigation"])
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
-main_api_router.include_router(login_router, prefix="/login", tags=["login"])
+# main_api_router.include_router(login_router, prefix="/login", tags=["login"])
 
 # Добавляем роутер в приложение
 app.include_router(main_api_router)
