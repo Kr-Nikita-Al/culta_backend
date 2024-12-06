@@ -12,6 +12,3 @@ python-jose==3.3.0
 starlette~=0.35.1
 pytest~=8.3.2
 base==0.0.0
-passlib==1.7.4
-python-multipart==0.0.5
-greenlet==2.0.2
