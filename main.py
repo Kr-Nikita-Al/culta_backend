@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import FastAPI, APIRouter
 
 import settings
-from auth import login_router
+# from auth import login_router
 from user import user_router
 from company import company_router
 from image import image_router
