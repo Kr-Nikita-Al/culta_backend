@@ -4,6 +4,7 @@ from user.model_dal import UserDAL
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/token")
 
+
 async def get_user_by_email_for_auth(email: str, session: AsyncSession):
     async with session.begin():
         user_dal = UserDAL(session)
