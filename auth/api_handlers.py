@@ -15,6 +15,7 @@ from db.session import get_db
 
 login_router = APIRouter()
 
+
 @login_router.post("/token", response_model=Token)
 async def login_for_access_token(
     form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)

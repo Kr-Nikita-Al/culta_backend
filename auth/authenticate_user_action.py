@@ -4,6 +4,7 @@ from auth.actions import get_user_by_email_for_auth
 from utils.hashing import Hasher
 from db.user_model import UserDB
 
+
 async def authenticate_user(
     email: str, password: str, db: AsyncSession
 ) -> Union[UserDB, None]:

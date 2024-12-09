@@ -12,6 +12,7 @@ from db.session import get_db
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/token")
 
+
 async def get_current_user_from_token(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
