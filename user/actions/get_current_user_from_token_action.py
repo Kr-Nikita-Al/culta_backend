@@ -7,13 +7,21 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette import status
 
 import settings
-from auth.actions import get_user_by_email_for_auth
 from db.session import get_db
+from user.model_dal import UserDAL
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/login/token")
 
 
-async def get_current_user_from_token(
+async def __get_user_by_email_for_auth(email: str, session: AsyncSession):
+    async with session.begin():
+        user_dal = UserDAL(session)
+        return await user_dal.get_user_by_email(
+            email=email,
+        )
+
+
+async def __get_current_user_from_token(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
     credentials_exception = HTTPException(
@@ -29,7 +37,7 @@ async def get_current_user_from_token(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = await get_user_by_email_for_auth(email=email, session=db)
+    user = await __get_user_by_email_for_auth(email=email, session=db)
     if user is None:
         raise credentials_exception
     return user
