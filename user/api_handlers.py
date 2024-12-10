@@ -4,7 +4,9 @@ from fastapi import Depends, HTTPException
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user
+from db import UserDB
+from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user, __check_user_permissions_on_delete
+from user.actions.get_current_user_from_token_action import __get_current_user_from_token, __get_user_by_email_for_auth
 from user.interface_request import CreateUserRequest, UpdateUserRequest
 from user.interface_response import CreateUserResponse, DeleteUserResponse, GetUserResponse, UpdateUserResponse
 
@@ -23,11 +25,19 @@ async def create_user(body: CreateUserRequest, db: AsyncSession = Depends(get_db
 
 
 @user_router.delete("/delete", response_model=DeleteUserResponse)
-async def delete_user(user_id: UUID, db: AsyncSession = Depends(get_db)) -> DeleteUserResponse:
+async def delete_user(user_id: UUID,
+                      db: AsyncSession = Depends(get_db),
+                      current_user: UserDB = Depends(__get_current_user_from_token),
+                      ) -> DeleteUserResponse:
     user_for_deletion = await __get_user_by_id(user_id=user_id, session=db)
     if user_for_deletion is None:
         raise HTTPException(status_code=404,
                             detail='User with id {0} is not found'.format(user_id))
+    if not __check_user_permissions_on_delete(
+        target_user=user_for_deletion,
+        current_user=current_user,
+    ):
+        raise HTTPException(status_code=403, detail="Forbidden.")
     # Попытка удалить пользователя
     deleted_user_id = await __delete_user(user_id, db)
     if deleted_user_id is None:
@@ -43,6 +53,15 @@ async def get_user_by_id(user_id: UUID, db: AsyncSession = Depends(get_db)) -> G
         raise HTTPException(status_code=404,
                             detail='User with id {0} is not found or was deleted before'.format(user_id))
     return user
+
+
+@user_router.get('/check_by_email')
+async def check_user_by_email(email: str, db: AsyncSession = Depends(get_db)):
+    user = await __get_user_by_email_for_auth(email, db)
+    if user is not None:
+        raise HTTPException(status_code=404,
+                            detail='User with email {0} already exists'.format(email))
+    return {'Success': True}
 
 
 @user_router.patch('/update_by_id', response_model=UpdateUserResponse)
