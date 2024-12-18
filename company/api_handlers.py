@@ -9,24 +9,47 @@ from company.actions import __create_company, __delete_company, __get_all_compan
 from company.interface_request import CreateCompanyRequest, UpdateCompanyRequest
 from company.interface_response import CreateCompanyResponse, DeleteCompanyResponse, GetAllCompanyResponse, \
     GetCompanyResponse, UpdateCompanyResponse,  GetAllCompanyProductsResponse
+from db import UserDB
 from db.session import get_db
-
+from sqlalchemy.exc import DBAPIError
 from fastapi import APIRouter
+
+from user.actions import __get_current_user_from_token
+from user_role.actions import __is_exist_user_role
+from utils.constants import EMPTY_UUID, PortalRole
 
 company_router = APIRouter()
 
 
 @company_router.post("/create", response_model=CreateCompanyResponse)
-async def create_company(body: CreateCompanyRequest, db: AsyncSession = Depends(get_db)) -> CreateCompanyResponse:
-    return await __create_company(body, db)
+async def create_company(body: CreateCompanyRequest,
+                         db: AsyncSession = Depends(get_db),
+                         current_user: UserDB = Depends(__get_current_user_from_token)) -> CreateCompanyResponse:
+    # Проверка прав на создание
+    is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id,EMPTY_UUID,
+                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+    if not is_exist_super_admin_role:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    try:
+        return await __create_company(body, current_user.user_id, db)
+    except DBAPIError as e:
+        raise HTTPException(status_code=422,
+                            detail='Incorrect data')
 
 
 @company_router.delete("/delete", response_model=DeleteCompanyResponse)
-async def delete_company(company_id: UUID, db: AsyncSession = Depends(get_db)) -> DeleteCompanyResponse:
+async def delete_company(company_id: UUID,
+                         db: AsyncSession = Depends(get_db),
+                         current_user: UserDB = Depends(__get_current_user_from_token)) -> DeleteCompanyResponse:
     company_for_deletion = await __get_company_by_id(company_id=company_id, session=db)
     if company_for_deletion is None:
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found'.format(company_id))
+    # Проверка прав на удаление
+    is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
+                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+    if not is_exist_super_admin_role:
+        raise HTTPException(status_code=403, detail='Forbidden')
     # Попытка удалить компанию
     deleted_company_id = await __delete_company(company_id, db)
     if deleted_company_id is None:
@@ -66,7 +89,13 @@ async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompany
 @company_router.patch('/update_by_id', response_model=UpdateCompanyResponse)
 async def update_company_by_id(company_id: UUID,
                                body: UpdateCompanyRequest,
-                               db: AsyncSession = Depends(get_db)) -> UpdateCompanyResponse:
+                               db: AsyncSession = Depends(get_db),
+                               current_user: UserDB = Depends(__get_current_user_from_token)) -> UpdateCompanyResponse:
+    # Проверка прав на обновление данных
+    is_exist_admin_role = await __is_exist_user_role(current_user.user_id, company_id,
+                                                     PortalRole.ROLE_PORTAL_ADMIN, db)
+    if not is_exist_admin_role:
+        raise HTTPException(status_code=403, detail='Forbidden')
     # Проверка на существование обновляемой компании
     company_for_update = await __get_company_by_id(company_id=company_id, session=db)
     if company_for_update is None:

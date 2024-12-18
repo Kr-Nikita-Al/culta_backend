@@ -1,0 +1,3 @@
+from user_role.interface_request.grant_user_role_request import GrantUserRoleRequest
+from user_role.interface_request.revoke_user_role_request import RevokeUserRoleRequest
+

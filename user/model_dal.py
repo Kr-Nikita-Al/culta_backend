@@ -16,9 +16,8 @@ class UserDAL:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def create_user(self, name: str, surname: str, phone: str, email: str, hashed_password: str,
-                          roles: list[PortalRole]
-    ) -> UserDB:
+    async def create_user(self, name: str, surname: str, phone: str,
+                          email: str, hashed_password: str) -> UserDB:
         if await self.get_user_by_email(email):
             raise HTTPException(status_code=404,
                                 detail='User with email {0} already exists'.format(email))
@@ -28,7 +27,6 @@ class UserDAL:
             phone=phone,
             email=email,
             hashed_password=hashed_password,
-            roles=roles,
         )
         self.db_session.add(new_user)
         await self.db_session.flush()

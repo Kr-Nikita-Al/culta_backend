@@ -11,7 +11,7 @@ async def authenticate_user(
 ) -> Union[UserDB, None]:
     user = await __get_user_by_email_for_auth(email=email, session=db)
     if user is None:
-        return
+        return None
     if not Hasher.verify_password(password, user.hashed_password):
-        return
+        return None
     return user

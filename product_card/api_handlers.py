@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from product_card.actions import __create_product_card, __get_product_card_by_id, __delete_product_card, __update_product_card_by_id
@@ -15,7 +15,11 @@ product_card_router = APIRouter()
 @product_card_router.post('/create', response_model=CreateProductCardResponse)
 async def create_product_card(body: CreateProductCardRequest,
                               db: AsyncSession = Depends(get_db)) -> CreateProductCardResponse:
-    return await __create_product_card(body, db)
+    try:
+        return await __create_product_card(body, db)
+    except DBAPIError as e:
+        raise HTTPException(status_code=422,
+                            detail='Incorrect data')
 
 
 @product_card_router.delete("/delete", response_model=DeleteProductCardResponse)
