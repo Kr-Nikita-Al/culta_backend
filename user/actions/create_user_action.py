@@ -16,7 +16,6 @@ async def __create_user(user_body: CreateUserRequest, session: AsyncSession) -> 
             phone=user_body.phone,
             email=user_body.email,
             hashed_password=Hasher.get_password_hash(user_body.password),
-            roles=[PortalRole.ROLE_PORTAL_USER, ],
         )
         return CreateUserResponse(
             user_id=user_db.user_id,

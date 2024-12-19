@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.model_dal import CompanyDal
@@ -5,7 +7,7 @@ from company.interface_request import CreateCompanyRequest
 from company.interface_response import CreateCompanyResponse
 
 
-async def __create_company(company_body: CreateCompanyRequest, session: AsyncSession) -> CreateCompanyResponse:
+async def __create_company(company_body: CreateCompanyRequest, user_id: UUID, session: AsyncSession) -> CreateCompanyResponse:
     async with session.begin():
         company_dal = CompanyDal(session)
         company_db = await company_dal.create_company(
@@ -20,7 +22,8 @@ async def __create_company(company_body: CreateCompanyRequest, session: AsyncSes
             age_limit=company_body.age_limit,
             work_state=company_body.work_state,
             start_time=company_body.start_time,
-            over_time=company_body.over_time
+            over_time=company_body.over_time,
+            creator_user_id=user_id
         )
         return CreateCompanyResponse(
             company_id=company_db.company_id,

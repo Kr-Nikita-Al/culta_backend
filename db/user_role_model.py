@@ -16,22 +16,30 @@ from utils.constants import EMPTY_UUID
 ############################
 
 
-class UserDB(Base):
-    __tablename__ = 'user'
+class UserRoleDB(Base):
+    __tablename__ = 'user_role'
 
-    user_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    relation_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Properties
-    name = Column(String, nullable=False)
-    surname = Column(String, nullable=False)
-    phone = Column(String(12), nullable=False)
-    email = Column(String, nullable=False, unique=True)
+    user_id = Column(UUID(as_uuid=True), nullable=False)
+    company_id = Column(UUID(as_uuid=True), nullable=False)
+    role = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
-    hashed_password = Column(String, nullable=False)
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
-    updater_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     time_created = Column(DateTime(timezone=True), default=datetime.now())
-    time_updated = Column(DateTime(timezone=True), default=datetime.now(), onupdate=datetime.now())
 
+    # Validation
+    @property
+    def is_super_admin(self) -> bool:
+        return self.role == PortalRole.PORTAL_ROLE_SUPER_ADMIN
+
+    @property
+    def is_admin(self) -> bool:
+        return self.role == PortalRole.PORTAL_ROLE_ADMIN
+
+    @property
+    def is_staff(self) -> bool:
+        return self.role == PortalRole.PORTAL_ROLE_STAFF

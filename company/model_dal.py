@@ -2,13 +2,11 @@ from datetime import time
 from typing import Union, List
 from uuid import UUID
 
-from sqlalchemy import select, update, and_, text, or_, exists
+from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload, contains_eager
 
-from db import CompanyDB, ProductCardDB, ImageDB
+from db import CompanyDB, ProductCardDB
 from product_card.interface_response import GetProductCardResponse
-from utils.constants import EMPTY_UUID
 
 
 class CompanyDal:
@@ -18,7 +16,7 @@ class CompanyDal:
     async def create_company(self, company_name: str, address: str, phone: str, email: str,
                              order_number: int, group_id: int, image_picture_id: str,
                              image_icon_id: str, age_limit: bool, work_state: bool, start_time: time,
-                             over_time: time
+                             over_time: time, creator_user_id: UUID
                              ) -> CompanyDB:
         new_company = CompanyDB(
             company_name=company_name,
@@ -32,7 +30,8 @@ class CompanyDal:
             age_limit=age_limit,
             work_state=work_state,
             start_time=start_time,
-            over_time=over_time
+            over_time=over_time,
+            creator_id=creator_user_id
         )
         self.db_session.add(new_company)
         await self.db_session.flush()
