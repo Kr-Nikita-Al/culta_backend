@@ -17,7 +17,7 @@ async def __check_user_permissions_on_update(target_user: UserDB, current_user: 
     """
     if target_user.user_id != current_user.user_id:
         is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
-                                                               PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+                                                               PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
         # check super_admin role
         if not is_exist_super_admin_role:
             return False

@@ -34,12 +34,12 @@ class UserRoleDB(Base):
     # Validation
     @property
     def is_super_admin(self) -> bool:
-        return self.role == PortalRole.ROLE_PORTAL_SUPER_ADMIN
+        return self.role == PortalRole.PORTAL_ROLE_SUPER_ADMIN
 
     @property
     def is_admin(self) -> bool:
-        return self.role == PortalRole.ROLE_PORTAL_ADMIN
+        return self.role == PortalRole.PORTAL_ROLE_ADMIN
 
     @property
     def is_staff(self) -> bool:
-        return self.role == PortalRole.ROLE_PORTAL_STAFF
+        return self.role == PortalRole.PORTAL_ROLE_STAFF

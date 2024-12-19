@@ -18,13 +18,13 @@ async def __check_user_permissions_on_delete(target_user: UserDB, current_user: 
     """
     # check super_admin role
     is_exist_super_admin_role = await __is_exist_user_role(target_user.user_id, EMPTY_UUID,
-                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+                                                           PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
     if is_exist_super_admin_role:
         raise HTTPException(status_code=406,
                             detail='Super admin can not be deleted via API')
     elif target_user.user_id != current_user.user_id:
         is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
-                                                               PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+                                                               PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
         # check super_admin deactivate
         if not is_exist_super_admin_role:
             return False

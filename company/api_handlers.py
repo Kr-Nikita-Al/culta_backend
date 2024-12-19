@@ -26,8 +26,8 @@ async def create_company(body: CreateCompanyRequest,
                          db: AsyncSession = Depends(get_db),
                          current_user: UserDB = Depends(__get_current_user_from_token)) -> CreateCompanyResponse:
     # Проверка прав на создание
-    is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id,EMPTY_UUID,
-                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+    is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
+                                                           PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
     if not is_exist_super_admin_role:
         raise HTTPException(status_code=403, detail='Forbidden')
     try:
@@ -47,7 +47,7 @@ async def delete_company(company_id: UUID,
                             detail='Company with id {0} is not found'.format(company_id))
     # Проверка прав на удаление
     is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
-                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+                                                           PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
     if not is_exist_super_admin_role:
         raise HTTPException(status_code=403, detail='Forbidden')
     # Попытка удалить компанию
@@ -93,7 +93,7 @@ async def update_company_by_id(company_id: UUID,
                                current_user: UserDB = Depends(__get_current_user_from_token)) -> UpdateCompanyResponse:
     # Проверка прав на обновление данных
     is_exist_admin_role = await __is_exist_user_role(current_user.user_id, company_id,
-                                                     PortalRole.ROLE_PORTAL_ADMIN, db)
+                                                     PortalRole.PORTAL_ROLE_ADMIN, db)
     if not is_exist_admin_role:
         raise HTTPException(status_code=403, detail='Forbidden')
     # Проверка на существование обновляемой компании

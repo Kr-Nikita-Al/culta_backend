@@ -10,7 +10,8 @@ from db import UserDB
 from db.session import get_db
 from settings import ACCESS_SUPER_ADMINS
 from user.actions import __get_current_user_from_token, __get_user_by_id
-from user_role.actions import __grant_user_role, __is_exist_user_role, __get_user_roles, __revoke_user_role
+from user_role.actions import __grant_user_role, __is_exist_user_role, __get_user_roles, __revoke_user_role, \
+    __get_user_roles_by_company_id
 from user_role.interface_request import GrantUserRoleRequest, RevokeUserRoleRequest
 from user_role.interface_response import GrantUserRoleResponse, GetUserRolesResponse, RevokeUserRoleResponse
 from utils.constants import PortalRole, EMPTY_UUID
@@ -32,7 +33,7 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
         raise HTTPException(status_code=403, detail='Forbidden')
     user_role_params = GrantUserRoleRequest(user_id=current_user.user_id,
                                             company_id=EMPTY_UUID,
-                                            role=PortalRole.ROLE_PORTAL_SUPER_ADMIN
+                                            role=PortalRole.PORTAL_ROLE_SUPER_ADMIN
                                             )
     try:
         return await __grant_user_role(user_role_params, db)
@@ -58,9 +59,9 @@ async def grant_admin_privilege(user_id: UUID,
     """
     # Проверка на возможность удаление авторизованным пользователем
     is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
-                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+                                                           PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
     is_exist_admin_role = await __is_exist_user_role(current_user.user_id, company_id_for_promotion,
-                                                     PortalRole.ROLE_PORTAL_ADMIN, db)
+                                                     PortalRole.PORTAL_ROLE_ADMIN, db)
     if is_exist_super_admin_role == False and is_exist_admin_role == False:
         raise HTTPException(status_code=403, detail='Forbidden')
     if current_user.user_id == user_id:
@@ -75,13 +76,13 @@ async def grant_admin_privilege(user_id: UUID,
         raise HTTPException(status_code=404, detail='User with id {0} not found'.format(user_id))
     is_exist_admin_role = await __is_exist_user_role(user_id,
                                                      company_id_for_promotion,
-                                                     PortalRole.ROLE_PORTAL_ADMIN, db)
+                                                     PortalRole.PORTAL_ROLE_ADMIN, db)
     if is_exist_admin_role:
         raise HTTPException(status_code=409,
                             detail='User with id {0} is already super_admin or admin on this company'.format(user_id))
     user_role_params = GrantUserRoleRequest(user_id=user_id,
                                             company_id=company_id_for_promotion,
-                                            role=PortalRole.ROLE_PORTAL_ADMIN
+                                            role=PortalRole.PORTAL_ROLE_ADMIN
                                             )
     try:
         return await __grant_user_role(user_role_params, db)
@@ -110,7 +111,7 @@ async def revoke_admin_privilege(user_id: UUID,
                                      __get_current_user_from_token)) -> RevokeUserRoleResponse:
     # Проверка на возможность удаление авторизованным пользователем
     is_exist_super_admin_role = await __is_exist_user_role(current_user.user_id, EMPTY_UUID,
-                                                           PortalRole.ROLE_PORTAL_SUPER_ADMIN, db)
+                                                           PortalRole.PORTAL_ROLE_SUPER_ADMIN, db)
     if not is_exist_super_admin_role:
         raise HTTPException(status_code=403, detail='Forbidden')
     if current_user.user_id == user_id:
@@ -125,12 +126,12 @@ async def revoke_admin_privilege(user_id: UUID,
         raise HTTPException(status_code=404, detail='User with id {0} not found'.format(user_id))
     is_exist_admin_role = await __is_exist_user_role(user_id,
                                                      company_id_for_promotion,
-                                                     PortalRole.ROLE_PORTAL_ADMIN, db)
+                                                     PortalRole.PORTAL_ROLE_ADMIN, db)
     if not is_exist_admin_role:
         raise HTTPException(status_code=409, detail='User with id {0} has no admin privileges'.format(user_id))
     user_role_params = RevokeUserRoleRequest(user_id=user_id,
                                              company_id=company_id_for_promotion,
-                                             role=PortalRole.ROLE_PORTAL_ADMIN
+                                             role=PortalRole.PORTAL_ROLE_ADMIN
                                              )
     try:
         revoked_user_id = await __revoke_user_role(user_role_params, db)
@@ -143,3 +144,11 @@ async def revoke_admin_privilege(user_id: UUID,
         raise HTTPException(status_code=503, detail='Database error')
     except DBAPIError as e:
         raise HTTPException(status_code=422, detail='Incorrect data')
+
+
+@user_role_router.get('/get_user_roles_in_company', response_model=List)
+async def get_user_roles_in_company(company_id: UUID,
+                                    db: AsyncSession = Depends(get_db),
+                                    current_user: UserDB = Depends(
+                                            __get_current_user_from_token)) -> List:
+    return await __get_user_roles_by_company_id(current_user.user_id, company_id, db)
