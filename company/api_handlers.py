@@ -106,6 +106,7 @@ async def update_company_by_id(company_id: UUID,
     if update_company_params == {}:
         raise HTTPException(status_code=422, detail='All fields are empty')
     try:
+        update_company_params['updater_id'] = current_user.user_id
         updated_company_id = await __update_company_by_id(update_company_params=update_company_params,
                                                           company_id=company_id, session=db)
     except IntegrityError as e:
