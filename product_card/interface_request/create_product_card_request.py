@@ -1,10 +1,11 @@
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, constr, conint, StrictBool
 
 
 class CreateProductCardRequest(BaseModel):
-    company_id: str
+    company_id: UUID
     title: Optional[constr(min_length=1, max_length=20)]
     sub_title: Optional[constr(min_length=1, max_length=50)]
     header: Optional[constr()]

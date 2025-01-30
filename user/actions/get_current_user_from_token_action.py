@@ -21,7 +21,7 @@ async def __get_user_by_email_for_auth(email: str, session: AsyncSession):
         )
 
 
-async def __get_current_user_from_token(
+async def __get_user_from_token(
     token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)
 ):
     credentials_exception = HTTPException(

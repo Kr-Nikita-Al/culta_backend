@@ -23,7 +23,7 @@ class UserRoleDB(Base):
 
     # Properties
     user_id = Column(UUID(as_uuid=True), nullable=False)
-    company_id = Column(UUID(as_uuid=True), nullable=False)
+    company_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     role = Column(String, nullable=False)
     is_active = Column(Boolean, default=True)
 
@@ -31,15 +31,3 @@ class UserRoleDB(Base):
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     time_created = Column(DateTime(timezone=True), default=datetime.now())
 
-    # Validation
-    @property
-    def is_super_admin(self) -> bool:
-        return self.role == PortalRole.PORTAL_ROLE_SUPER_ADMIN
-
-    @property
-    def is_admin(self) -> bool:
-        return self.role == PortalRole.PORTAL_ROLE_ADMIN
-
-    @property
-    def is_staff(self) -> bool:
-        return self.role == PortalRole.PORTAL_ROLE_STAFF

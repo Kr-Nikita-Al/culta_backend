@@ -16,13 +16,14 @@ class UserRoleDAL:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def grant_user_role(self, user_id: UUID, company_id: UUID, role: PortalRole) -> UserRoleDB:
+    async def grant_user_role(self, user_id: UUID, company_id: UUID, role: PortalRole, creator_id: UUID) -> UserRoleDB:
         if await self.is_exist_user_role(user_id, company_id, role):
             raise HTTPException(status_code=400, detail='Role {0} already exist'.format(role))
         new_user_role = UserRoleDB(
             user_id=user_id,
             company_id=company_id,
-            role=role
+            role=role,
+            creator_id=creator_id
         )
         self.db_session.add(new_user_role)
         await self.db_session.flush()
