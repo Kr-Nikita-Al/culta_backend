@@ -8,7 +8,7 @@ from company.actions import __get_company_by_id
 from db import UserDB
 from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user, \
     __check_user_permissions_on_delete, __check_user_permissions_on_update
-from user.actions.get_current_user_from_token_action import __get_current_user_from_token, __get_user_by_email_for_auth
+from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
 from user.interface_request import CreateUserRequest, UpdateUserRequest
 from user.interface_response import CreateUserResponse, DeleteUserResponse, GetUserResponse, UpdateUserResponse
 
@@ -31,7 +31,7 @@ async def create_user(body: CreateUserRequest, db: AsyncSession = Depends(get_db
 @user_router.delete("/delete", response_model=DeleteUserResponse)
 async def delete_user(user_id: UUID,
                       db: AsyncSession = Depends(get_db),
-                      current_user: UserDB = Depends(__get_current_user_from_token),
+                      current_user: UserDB = Depends(__get_user_from_token),
                       ) -> DeleteUserResponse:
     user_for_deletion = await __get_user_by_id(user_id=user_id, session=db)
     if user_for_deletion is None:
@@ -72,7 +72,7 @@ async def check_user_by_email(email: str, db: AsyncSession = Depends(get_db)):
 async def update_user(user_id: UUID,
                       body: UpdateUserRequest,
                       db: AsyncSession = Depends(get_db),
-                      current_user: UserDB = Depends(__get_current_user_from_token)) -> UpdateUserResponse:
+                      current_user: UserDB = Depends(__get_user_from_token)) -> UpdateUserResponse:
     # Проверка на существование обновляемого пользователя
     user_for_update = await __get_user_by_id(user_id=user_id, session=db)
     if user_for_update is None:

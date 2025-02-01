@@ -14,7 +14,7 @@ class ProductCardDal:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def create_product_card(self, kwargs) -> ProductCardDB:
+    async def create_product_card(self, kwargs, creator_user_id: UUID) -> ProductCardDB:
 
         company_id = kwargs["company_id"]
         query = select(CompanyDB).where(and_(CompanyDB.company_id == company_id,
@@ -61,16 +61,18 @@ class ProductCardDal:
             is_active=kwargs["is_active"],
             company_group_id=kwargs["company_group_id"],
             image_product_id=kwargs["image_product_id"],
-            image_icon_id=kwargs["image_icon_id"]
+            image_icon_id=kwargs["image_icon_id"],
+            creator_id=creator_user_id
         )
         self.db_session.add(new_product_card)
         await self.db_session.flush()
         return new_product_card
 
-    async def delete_product_card(self, product_card_id: UUID) -> Union[UUID, None]:
+    async def delete_product_card(self, product_card_id: UUID, updater_id: UUID) -> Union[UUID, None]:
         query = update(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,
                                                  ProductCardDB.is_active == True))\
-                              .values(is_active=False)\
+                              .values({'is_active': False,
+                                       'updater_id': updater_id})\
                               .returning(ProductCardDB.product_card_id)
         res = await self.db_session.execute(query)
         deleted_product_card_id_row = res.unique().fetchone()

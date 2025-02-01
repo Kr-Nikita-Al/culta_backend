@@ -37,10 +37,11 @@ class CompanyDal:
         await self.db_session.flush()
         return new_company
 
-    async def delete_company(self, company_id: UUID) -> Union[UUID, None]:
+    async def delete_company(self, company_id: UUID, updater_id: UUID) -> Union[UUID, None]:
         query = update(CompanyDB).where(and_(CompanyDB.company_id == company_id,
                                              CompanyDB.is_active == True)) \
-            .values(is_active=False) \
+            .values({'is_active': False,
+                     'updater_id': updater_id}) \
             .returning(CompanyDB.company_id)
         res = await self.db_session.execute(query)
         deleted_company_id_row = res.unique().fetchone()

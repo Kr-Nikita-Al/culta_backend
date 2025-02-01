@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from product_card.interface_response import CreateProductCardResponse
@@ -5,11 +7,12 @@ from product_card.interface_request import CreateProductCardRequest
 from product_card.model_dal import ProductCardDal
 
 
-async def __create_product_card(product_card_body: CreateProductCardRequest, session: AsyncSession) -> CreateProductCardResponse:
+async def __create_product_card(product_card_body: CreateProductCardRequest, user_id: UUID,
+                                session: AsyncSession) -> CreateProductCardResponse:
     async with session.begin():
         product_card_dal = ProductCardDal(session)
         product_card_db = await product_card_dal.create_product_card(
-            product_card_body.__dict__
+            product_card_body.__dict__, creator_user_id=user_id
         )
         return CreateProductCardResponse(
             company_id=product_card_db.company_id,

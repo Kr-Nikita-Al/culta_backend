@@ -19,8 +19,8 @@ class ScreenDB(Base):
 
     # Properties
     screen_title = Column(String(100), default='')
-    screen_sub_title = Column(String(100), default='')
-    screen_count_number = Column(Integer, default=0)
+    screen_sub_title = Column(String(100), nullable=False, default='')
+    screen_order_number = Column(Integer, default=0)
 
     # Connection fields
     company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)

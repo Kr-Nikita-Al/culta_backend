@@ -17,5 +17,5 @@ async def __create_container(container_body: CreateContainerRequest, session: As
             container_title=container_db.container_title,
             container_sub_title=container_db.container_sub_title,
             container_type=container_db.container_type,
-            container_order=container_db.container_order,
+            container_order_number=container_db.container_order_number,
         )

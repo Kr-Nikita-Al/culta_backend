@@ -2,7 +2,7 @@ from user.actions.update_user_by_id_action import __update_user
 from user.actions.delete_user_action import __delete_user
 from user.actions.create_user_action import __create_user
 from user.actions.get_user_by_id_action import __get_user_by_id
-from user.actions.get_current_user_from_token_action import __get_current_user_from_token, __get_user_by_email_for_auth
+from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
 from user.actions.check_user_permissions_on_delete import __check_user_permissions_on_delete
 from user.actions.check_user_permissions_on_update import __check_user_permissions_on_update
 

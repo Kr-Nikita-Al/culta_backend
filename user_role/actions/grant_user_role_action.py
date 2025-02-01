@@ -11,7 +11,8 @@ async def __grant_user_role(user_role_body: GrantUserRoleRequest, session: Async
         user_role_db = await user_role_dal.grant_user_role(
             user_id=user_role_body.user_id,
             company_id=user_role_body.company_id,
-            role=user_role_body.role
+            role=user_role_body.role,
+            creator_id=user_role_body.creator_id
         )
         return GrantUserRoleResponse(
             granted_user_id=user_role_db.user_id

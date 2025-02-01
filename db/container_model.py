@@ -19,7 +19,7 @@ class ContainerDB(Base):
     container_title = Column(String(100), default='')
     container_sub_title = Column(String(100), default='')
     container_type = Column(String(35), default='')
-    container_order = Column(Integer, default=0)
+    container_order_number = Column(Integer, nullable=False, default=0)
 
     # Navigation fields
     items = relationship("ItemDB", back_populates="container_info", lazy="joined")
