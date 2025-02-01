@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -45,6 +45,14 @@ class ItemDal:
         item_row = res.scalars().first()
         if item_row is not None:
             return item_row
+        return None
+
+    async def get_all_items(self) -> Union[List[ItemDB], None]:
+        query = select(ItemDB)
+        res = await self.db_session.execute(query)
+        items_row = res.unique().scalars().all()
+        if items_row is not None:
+            return items_row
         return None
 
     async def delete_item(self, item_id: UUID) -> UUID:

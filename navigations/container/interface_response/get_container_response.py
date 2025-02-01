@@ -11,7 +11,7 @@ class GetContainerResponse(BaseModelResponse):
     container_title: str
     container_sub_title: str
     container_type: str
-    container_order: int
+    container_order_number: int
     items: List[GetItemResponse]
 
 

@@ -12,7 +12,7 @@ class GetScreenResponse(BaseModelResponse):
     company_group_id: int
     screen_title: str
     screen_sub_title: str
-    screen_count_number: int
+    screen_order_number: int
     creator_id: UUID
     updater_id: UUID
     time_created: datetime

@@ -24,7 +24,7 @@ async def create_product_card(body: CreateProductCardRequest,
     if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
         raise HTTPException(status_code=403, detail='Forbidden')
     try:
-        return await __create_product_card(body, db)
+        return await __create_product_card(body, cur_user.user_id, db)
     except DBAPIError as e:
         raise HTTPException(status_code=422,
                             detail='Incorrect data')
@@ -45,7 +45,7 @@ async def delete_product_card(product_card_id: UUID,
     if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
         raise HTTPException(status_code=403, detail='Forbidden')
     # Попытка удалить карточку продукта
-    del_product_card_id = await __delete_product_card(product_card_id, db)
+    del_product_card_id = await __delete_product_card(product_card_id, cur_user.user_id, db)
     if del_product_card_id is None:
         raise HTTPException(status_code=404,
                             detail='Product card with id {0} was deleted before'.format(product_card_id))
@@ -81,6 +81,7 @@ async def update_product_card_by_id(product_card_id: UUID,
     if upd_product_card_params == {}:
         raise HTTPException(status_code=422, detail='All fields are empty')
     try:
+        upd_product_card_params['updater_id'] = cur_user.user_id
         updated_product_card_id = await __update_product_card_by_id(update_product_card_params=upd_product_card_params,
                                                                     product_card_id=product_card_id, session=db)
     except IntegrityError as e:

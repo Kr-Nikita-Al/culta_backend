@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -16,7 +16,7 @@ class ScreenDal:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def create_screen(self, kwargs) -> ScreenDB:
+    async def create_screen(self, kwargs, creator_user_id: UUID) -> ScreenDB:
         company_id = kwargs["company_id"]
         query = select(CompanyDB).where(and_(CompanyDB.company_id == company_id,
                                              CompanyDB.is_active == True))
@@ -32,7 +32,8 @@ class ScreenDal:
             company_group_id=kwargs["company_group_id"],
             screen_title=kwargs["screen_title"],
             screen_sub_title=kwargs["screen_sub_title"],
-            screen_count_number=kwargs["screen_count_number"],
+            screen_order_number=kwargs["screen_order_number"],
+            creator_id=creator_user_id
         )
         self.db_session.add(new_screen)
         await self.db_session.flush()
@@ -44,6 +45,14 @@ class ScreenDal:
         screen_row = res.scalars().first()
         if screen_row is not None:
             return screen_row
+        return None
+
+    async def get_all_screens(self) -> Union[List[ScreenDB], None]:
+        query = select(ScreenDB)
+        res = await self.db_session.execute(query)
+        screens_row = res.unique().scalars().all()
+        if screens_row is not None:
+            return screens_row
         return None
 
     async def delete_screen(self, screen_id: UUID) -> UUID:

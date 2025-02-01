@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -23,7 +23,7 @@ class ContainerDal:
             container_title=kwargs["container_title"],
             container_sub_title=kwargs["container_sub_title"],
             container_type=kwargs["container_type"],
-            container_order=kwargs["container_order"],
+            container_order_number=kwargs["container_order_number"],
         )
         self.db_session.add(new_container)
         await self.db_session.flush()
@@ -35,6 +35,14 @@ class ContainerDal:
         container_row = res.scalars().first()
         if container_row is not None:
             return container_row
+        return None
+
+    async def get_all_containers(self) -> Union[List[ContainerDB], None]:
+        query = select(ContainerDB)
+        res = await self.db_session.execute(query)
+        containers_row = res.unique().scalars().all()
+        if containers_row is not None:
+            return containers_row
         return None
 
     async def delete_container(self, container_id: UUID) -> UUID:

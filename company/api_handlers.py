@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.actions import __create_company, __delete_company, __get_all_companies, __get_company_by_id, \
@@ -11,7 +11,6 @@ from company.interface_response import CreateCompanyResponse, DeleteCompanyRespo
     GetCompanyResponse, UpdateCompanyResponse,  GetAllCompanyProductsResponse
 from db import UserDB
 from db.session import get_db
-from sqlalchemy.exc import DBAPIError
 from fastapi import APIRouter
 
 from user.actions import __get_user_from_token
