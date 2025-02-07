@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI, APIRouter
 
+from s3_directory import s3_directory_router
 from settings import APP_PORT
 from auth import login_router
 from user import user_router
@@ -28,6 +29,7 @@ main_api_router.include_router(user_role_router, prefix="/user_role", tags=["use
 main_api_router.include_router(company_router, prefix="/company", tags=["company"])
 main_api_router.include_router(product_card_router, prefix="/product_card", tags=["product_card"])
 main_api_router.include_router(image_router, prefix="/image", tags=["image"])
+main_api_router.include_router(s3_directory_router, prefix="/s3_directory", tags=["s3_directory"])
 main_api_router.include_router(item_router, prefix="/item_navigation", tags=["item_navigation"])
 main_api_router.include_router(container_router, prefix="/container_navigation", tags=["container_navigation"])
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])

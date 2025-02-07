@@ -29,10 +29,10 @@ class ImageDal:
         new_image = ImageDB(
             company_id=company_id_for_adding,
             company_group_id=kwargs["company_group_id"],
-            title=kwargs["title"],
+            file_name=kwargs["file_name"],
             type_col=kwargs["type_col"],
             image_type=kwargs["image_type"],
-            url=kwargs["url"],
+            file_path=kwargs["file_path"],
             resolution=kwargs["resolution"],
             tags=kwargs["tags"],
             order_number=kwargs["order_number"],

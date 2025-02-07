@@ -13,8 +13,10 @@ from db import UserDB
 from db.session import get_db
 from fastapi import APIRouter
 
+from s3_directory.storage import S3Client
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
+from utils.constants import BASE_STORAGE_DIRECTORY
 
 company_router = APIRouter()
 
@@ -28,7 +30,11 @@ async def create_company(body: CreateCompanyRequest,
     if not cur_user_role_model.is_super_admin:
         raise HTTPException(status_code=403, detail='Forbidden')
     try:
-        return await __create_company(body, cur_user.user_id, db)
+        company = await __create_company(body, cur_user.user_id, db)
+        s3client = S3Client()
+        await s3client.create_directory(dir_path=BASE_STORAGE_DIRECTORY.COMPANY,
+                                        dir_name="company_{0}".format(str(company.company_id)))
+        return company
     except DBAPIError as e:
         raise HTTPException(status_code=422,
                             detail='Incorrect data')

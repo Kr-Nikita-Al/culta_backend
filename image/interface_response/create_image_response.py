@@ -7,10 +7,15 @@ from utils.base_model_response import BaseModelResponse
 class CreateImageResponse(BaseModelResponse):
     image_id: UUID
     company_id: UUID
-    title: str
+    url: str
+
+
+class CreateImageInterface(BaseModelResponse):
+    image_id: UUID
+    company_id: UUID
     type_col: str
     image_type: str
-    url: str
+    file_path: str
     resolution: str
     tags: str
     order_number: int

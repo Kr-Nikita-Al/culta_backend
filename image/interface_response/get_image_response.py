@@ -6,13 +6,13 @@ from pydantic import EmailStr
 from utils.base_model_response import BaseModelResponse
 
 
-class GetImageResponse(BaseModelResponse):
+class GetImageInterface(BaseModelResponse):
     image_id: UUID
     company_id: UUID
-    title: str
+    file_name: str
     type_col: str
     image_type: str
-    url: str
+    file_path: str
     resolution: str
     tags: str
     order_number: int

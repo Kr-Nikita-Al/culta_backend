@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.actions import __get_company_by_id
 from db import UserDB
+from s3_directory.storage.s3client import S3Client
 from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user, \
     __check_user_permissions_on_delete, __check_user_permissions_on_update
 from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
@@ -16,13 +17,19 @@ from db.session import get_db
 
 from fastapi import APIRouter
 
+from utils.constants import BASE_STORAGE_DIRECTORY
+
 user_router = APIRouter()
 
 
 @user_router.post("/create", response_model=CreateUserResponse)
 async def create_user(body: CreateUserRequest, db: AsyncSession = Depends(get_db)) -> CreateUserResponse:
     try:
-        return await __create_user(body, db)
+        user = await __create_user(body, db)
+        s3client = S3Client()
+        await s3client.create_directory(dir_path=BASE_STORAGE_DIRECTORY.USER,
+                                        dir_name="user_{0}".format(str(user.user_id)))
+        return user
     except DBAPIError as e:
         raise HTTPException(status_code=422,
                             detail='Incorrect data')
