@@ -11,10 +11,8 @@ class UpdateImageRequest(BaseModel):
     resolution: Optional[constr()]
     tags: Optional[constr()]
     order_number: Optional[conint()]
-    size: Optional[conint()]
     width: Optional[conint()]
     height: Optional[conint()]
     is_hidden: Optional[StrictBool]
-    is_archived: Optional[StrictBool]
     company_group_id: Optional[constr()]
 

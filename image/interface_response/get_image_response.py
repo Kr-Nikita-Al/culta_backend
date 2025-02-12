@@ -20,7 +20,12 @@ class GetImageInterface(BaseModelResponse):
     width: int
     height: int
     is_hidden: bool
-    is_archived: bool
+    is_used: bool
     company_group_id: UUID
     creator_id: UUID
     time_created: datetime
+
+
+class GetImageResponse(BaseModelResponse):
+    url: str
+    image: GetImageInterface

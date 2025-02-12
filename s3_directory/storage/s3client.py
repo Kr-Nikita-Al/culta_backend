@@ -1,13 +1,14 @@
 from contextlib import asynccontextmanager
 from typing import Dict
+from uuid import UUID
 
 from aiobotocore.session import get_session
 from boto3.exceptions import S3UploadFailedError
 from botocore.exceptions import NoCredentialsError, ClientError
 from fastapi import HTTPException
 
-from utils.constants import CONFIG_S3CLIENT, LIMIT_FILE_SIZE, LIMIT_DIRECTORY_SIZE, \
-                            IMAGE_ENLARGEMENTS, BASE_STORAGE_DIRECTORY
+from s3_directory.actions import check_file_path_put, check_size_limits, check_file_path_get
+from utils.constants import CONFIG_S3CLIENT, BASE_STORAGE_DIRECTORY, EMPTY_UUID
 
 
 class S3Client:
@@ -43,69 +44,99 @@ class S3Client:
         obj_dict = await self.get_all_objects()
         return {k: v for k, v in obj_dict.items() if dir_name in k}
 
-    async def check_size_limits(self, dir_name: str, file_size: float) -> bool:
+    async def update_file_place_object(self, old_file_path: str, new_file_path: str,
+                                       old_file_name: str, new_file_name: str, company_id: UUID):
         """
-        Проверка на лимит по размеру файла, размеру существующих файлов в папке, кол-ву файлов
-        :return:
-        """
-        if file_size > LIMIT_FILE_SIZE:
-            return False
-        obj_dict = await self.get_objects_by_dir_name(dir_name=dir_name)
-        dir_size = sum(list(obj_dict.values())) + file_size
-        if dir_size > LIMIT_DIRECTORY_SIZE:
-            return False
-        return True
-
-    async def check_file_path(self, file_path: str) -> bool:
-        """
-       Проверка на корректность расширения файла и наличия директории в S3Storage
-       :return: возможность загрузки файла
-       """
-        if BASE_STORAGE_DIRECTORY.USER not in file_path and BASE_STORAGE_DIRECTORY.COMPANY not in file_path:
-            return False
-        enlargement = file_path.split('.')[1]
-        path_to_dir = file_path[:file_path.rfind('/')+1]
-        obj_dict = await self.get_all_objects()
-        return path_to_dir in obj_dict.keys() and enlargement in IMAGE_ENLARGEMENTS
-
-    async def generate_get_presigned_url(self, full_file_path: str) -> str:
-        """
-        Метод динамической генерации урла для скачивания/загрузки файла
+        Метод обновления расположения и имени файла
         :return: url
         """
         try:
             async with self.__get_client() as client:
                 obj_dict = await self.get_all_objects()
-                if full_file_path not in obj_dict.keys():
-                    raise HTTPException(status_code=422, detail='Incorrect file path')
-                url = await client.generate_presigned_url(ClientMethod='get_object', ExpiresIn=120,
-                                                          Params={'Bucket': self.bucket_name, 'Key': full_file_path})
-                return url
+                if not check_file_path_get(file_path=old_file_path, obj_dict=obj_dict, company_id=company_id):
+                    raise HTTPException(status_code=422, detail='Incorrect old file name')
+                if not check_file_path_put(file_path=new_file_path, obj_dict=obj_dict, file_name=new_file_name,
+                                           company_id=company_id):
+                    raise HTTPException(status_code=422, detail='Incorrect file path or new file name')
+                # 1. Копируем объект с новым именем
+                copy_response = await client.copy_object(Bucket=self.bucket_name, Key=new_file_path + new_file_name,
+                                                         CopySource={'Bucket': self.bucket_name,
+                                                                     'Key': old_file_path + old_file_name})
+                # 2. Проверяем успешность копирования и удаляем исходный файл
+                if copy_response['ResponseMetadata']['HTTPStatusCode'] != 200:
+                    raise HTTPException(status_code=404, detail="Renamed file not found")
+                _ = await client.delete_object(Bucket=self.bucket_name, Key=old_file_path + old_file_name)
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="File not found")
         except NoCredentialsError:
-            raise HTTPException(status_code=403, detail="Ключи доступа не найдены.")
+            raise HTTPException(status_code=403, detail="Keys not found")
         except (ClientError, S3UploadFailedError) as e:
-            raise HTTPException(status_code=422, detail=f"Ошибка: {e.response['Error']['Message']}")
+            raise HTTPException(status_code=422, detail=f"Error: {e.response['Error']['Message']}")
 
-    async def generate_put_presigned_url(self, full_file_path: str, file_size: float) -> str:
+    async def delete_object(self, file_path: str, file_name: str, company_id: UUID):
         """
-        Метод динамической генерации урла для скачивания/загрузки файла
+        Метод удаления файла по путям file_path
         :return: url
         """
         try:
             async with self.__get_client() as client:
-                if not await self.check_file_path(file_path=full_file_path):
+                obj_dict = await self.get_all_objects()
+                if not check_file_path_get(file_path=file_path, obj_dict=obj_dict, company_id=company_id):
                     raise HTTPException(status_code=422, detail='Incorrect file path')
-                if not await self.check_size_limits(dir_name=full_file_path.split('/')[1], file_size=file_size):
-                    raise HTTPException(status_code=422, detail='Incorrect file size')
+                _ = await client.delete_object(Bucket=self.bucket_name, Key=file_path + file_name)
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="File not found")
+        except NoCredentialsError:
+            raise HTTPException(status_code=403, detail="Keys not found")
+        except (ClientError, S3UploadFailedError) as e:
+            raise HTTPException(status_code=422, detail=f"Error: {e.response['Error']['Message']}")
+
+    async def generate_get_presigned_url(self, file_path: str, file_name: str, company_id: UUID = EMPTY_UUID) -> str:
+        """
+        Метод динамической генерации преподписанного урла для скачивания файла
+        :return: url
+        """
+        try:
+            async with self.__get_client() as client:
+                obj_dict = await self.get_all_objects()
+                if not check_file_path_get(file_path=file_path, obj_dict=obj_dict, company_id=company_id):
+                    raise HTTPException(status_code=422, detail='Incorrect file path')
+                url = await client.generate_presigned_url(ClientMethod='get_object', ExpiresIn=120,
+                                                          Params={'Bucket': self.bucket_name,
+                                                                  'Key': file_path + file_name})
+                return url
+        except FileNotFoundError:
+            raise HTTPException(status_code=404, detail="File not found")
+        except NoCredentialsError:
+            raise HTTPException(status_code=403, detail="Keys not found")
+        except (ClientError, S3UploadFailedError) as e:
+            raise HTTPException(status_code=422, detail=f"Error: {e.response['Error']['Message']}")
+
+    async def generate_put_presigned_url(self, file_path: str, file_name: str, file_size: float, company_id: UUID) -> str:
+        """
+        Метод динамической генерации преподписанного урла для загрузки файла
+        :param file_path: путь до файла
+        :param file_name: название файла
+        :param file_size: размер файла
+        :param company_id: id компании, где есть права для размещения изображения
+        :return: url
+        """
+        try:
+            obj_dict = await self.get_objects_by_dir_name(dir_name=file_path)
+            if not check_file_path_put(file_path=file_path, obj_dict=obj_dict, file_name=file_name,
+                                       company_id=company_id):
+                raise HTTPException(status_code=422, detail='Incorrect file path or file name')
+            if not check_size_limits(obj_dict=obj_dict, file_size=file_size):
+                raise HTTPException(status_code=422, detail='Incorrect file size')
+            async with self.__get_client() as client:
                 url = await client.generate_presigned_url(ClientMethod='put_object', ExpiresIn=120,
-                                                          Params={'Bucket': self.bucket_name, 'Key': full_file_path})
+                                                          Params={'Bucket': self.bucket_name,
+                                                                  'Key': file_path + file_name})
                 return url
         except NoCredentialsError:
-            raise HTTPException(status_code=403, detail="Ключи доступа не найдены.")
+            raise HTTPException(status_code=403, detail="Keys not found")
         except (ClientError, S3UploadFailedError) as e:
-            raise HTTPException(status_code=422, detail=f"Ошибка: {e.response['Error']['Message']}")
+            raise HTTPException(status_code=422, detail=f"Error: {e.response['Error']['Message']}")
 
     async def create_directory(self, dir_name: str, dir_path: str):
         """
@@ -116,7 +147,6 @@ class S3Client:
         """
         if BASE_STORAGE_DIRECTORY.USER not in dir_path and BASE_STORAGE_DIRECTORY.COMPANY not in dir_path:
             raise HTTPException(status_code=422, detail='Incorrect path')
-        dir_path = dir_path + '/' if dir_path[-1] != '/' else dir_path
         try:
             async with self.__get_client() as client:
                 obj_dict = await self.get_all_objects()
@@ -127,20 +157,6 @@ class S3Client:
                     raise HTTPException(status_code=409,
                                         detail='Directory with name <{0}> already exist in storage'.format(dir_name))
         except NoCredentialsError:
-            raise HTTPException(status_code=403, detail="Ключи доступа не найдены.")
+            raise HTTPException(status_code=403, detail="Keys not found")
         except (ClientError, S3UploadFailedError) as e:
-            raise HTTPException(status_code=422, detail=f"Ошибка: {e.response['Error']['Message']}")
-
-
-# async def main():
-#     s3client = S3Client()
-#     # url = await s3client.generate_presigned_url(filename='company_0101/image.jpg', file_size=100)
-#     # print("Подписная ссылка:", url)
-#
-#     # await s3client.create_company_directory('company_0101')
-#
-#     d = await s3client.get_objects_by_dir_name('company_8419cbac-c063-44f4-b8c6-61f3263a20ee')
-#     print(d)
-#
-#
-# asyncio.run(main())
+            raise HTTPException(status_code=422, detail=f"Error: {e.response['Error']['Message']}")

@@ -31,7 +31,7 @@ class ImageDB(Base):
     width = Column(Integer, default=0)
     height = Column(Integer, default=0)
     is_hidden = Column(Boolean, default=False)
-    is_archived = Column(Boolean, default=False)
+    is_used = Column(Boolean, default=False)
 
     # Connection fields
     company_group_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

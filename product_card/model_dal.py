@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Union, List
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -87,6 +87,15 @@ class ProductCardDal:
         if product_card_row is not None:
             return product_card_row[0]
         return None
+
+    async def get_products_by_company_id(self, company_id: UUID) -> List:
+        query = select(ProductCardDB).where(and_(ProductCardDB.company_id == company_id,
+                                                 ProductCardDB.is_active == True))
+        res = await self.db_session.execute(query)
+        products_row = res.unique().scalars().all()
+        if products_row is not None:
+            return products_row
+        return []
 
     async def update_product_card(self, product_card_id: UUID, **kwargs) -> Union[UUID, None]:
         query = update(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,

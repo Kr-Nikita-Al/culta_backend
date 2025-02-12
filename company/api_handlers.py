@@ -5,14 +5,15 @@ from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.actions import __create_company, __delete_company, __get_all_companies, __get_company_by_id, \
-    __update_company_by_id, __get_company_products_by_id
+    __update_company_by_id
 from company.interface_request import CreateCompanyRequest, UpdateCompanyRequest
 from company.interface_response import CreateCompanyResponse, DeleteCompanyResponse, GetAllCompanyResponse, \
-    GetCompanyResponse, UpdateCompanyResponse,  GetAllCompanyProductsResponse
+    GetCompanyResponse, UpdateCompanyResponse
 from db import UserDB
 from db.session import get_db
 from fastapi import APIRouter
 
+from image.actions import __update_status_used_image
 from s3_directory.storage import S3Client
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
@@ -71,16 +72,6 @@ async def get_company_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)
     return company
 
 
-@company_router.get('/get_products_by_id', response_model=GetAllCompanyProductsResponse)
-async def get_company_products_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)) -> GetAllCompanyProductsResponse:
-    company = await __get_company_by_id(company_id, db)
-    if company is None:
-        raise HTTPException(status_code=404,
-                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
-    products = await __get_company_products_by_id(company_id, db)
-    return GetAllCompanyProductsResponse(products=products)
-
-
 @company_router.get('/get_all', response_model=GetAllCompanyResponse)
 async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompanyResponse:
     companies = await __get_all_companies(db)
@@ -112,9 +103,13 @@ async def update_company_by_id(company_id: UUID,
         upd_company_params['updater_id'] = cur_user.user_id
         updated_company_id = await __update_company_by_id(update_company_params=upd_company_params,
                                                           company_id=company_id, session=db)
+        # Обновление статуса изображений в случае наличия их в upd_company_params
+        images_upd_dict = {upd_company.__getattribute__(img_id): upd_company_params[img_id] for img_id in
+                           ['image_picture_id', 'image_icon_id'] if img_id in upd_company_params.keys()}
+        if images_upd_dict != {}:
+            await __update_status_used_image(images_upd_dict=images_upd_dict, session=db)
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
     if updated_company_id is None:
-        raise HTTPException(status_code=404,
-                            detail='Company with id {0} was deleted'.format(company_id))
+        raise HTTPException(status_code=404,  detail='Company with id {0} was deleted'.format(company_id))
     return UpdateCompanyResponse(updated_company_id=updated_company_id)

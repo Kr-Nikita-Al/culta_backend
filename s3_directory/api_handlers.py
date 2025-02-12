@@ -19,6 +19,8 @@ s3_directory_router = APIRouter()
 async def create_directory(body: CreateDirectoryRequest,
                            db: AsyncSession = Depends(get_db),
                            cur_user: UserDB = Depends(__get_user_from_token)) -> Dict:
+    if body.dir_path.count('/') < 2 or body.dir_path[-1] != '/':
+        raise HTTPException(status_code=422, detail='Incorrect directory path')
     # Проверка прав на создание директории внутри папки компании
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=body.company_id)
     if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
