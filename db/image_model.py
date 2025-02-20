@@ -37,7 +37,6 @@ class ImageDB(Base):
     company_group_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
 
     company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)
-    company_info = relationship("CompanyDB", back_populates="images", lazy="joined")
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

@@ -61,7 +61,7 @@ class ImageDal:
             return image_row
         return None
 
-    async def get_images_by_company_id(self, company_id: UUID) -> List:
+    async def get_images_by_company_id(self, company_id: UUID) -> List[ImageDB]:
         query = select(ImageDB).where(ImageDB.company_id == company_id)
         res = await self.db_session.execute(query)
         image_row = res.unique().scalars().all()

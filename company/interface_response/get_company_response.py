@@ -33,4 +33,3 @@ class GetCompanyResponse(BaseModelResponse):
     start_time: time
     over_time: time
     screens: List[GetScreenIDResponse]
-    images: List[GetImageInterface]

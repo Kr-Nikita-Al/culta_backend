@@ -4,10 +4,11 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from db import ImageDB
 from image.model_dal import ImageDal
 
 
-async def __get_images_by_company_id(company_id: UUID, session: AsyncSession) -> List:
+async def __get_images_by_company_id(company_id: UUID, session: AsyncSession) -> List[ImageDB]:
     async with session.begin():
         image_dal = ImageDal(session)
         images = await image_dal.get_images_by_company_id(

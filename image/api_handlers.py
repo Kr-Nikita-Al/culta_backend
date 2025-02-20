@@ -1,6 +1,7 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,9 +10,9 @@ from db import UserDB
 from db.session import get_db
 from image.actions import __create_image, __get_image_by_id, __delete_image, __update_image_by_id, \
     __get_images_by_company_id, __get_upd_file_data
-from image.interface_request import CreateImageRequest, UpdateImageRequest
+from image.interface_request import CreateImageRequest, UpdateImageRequest, UploadImageRequest
 from image.interface_response import CreateImageResponse, DeleteImageResponse, UpdateImageResponse, GetImageResponse, \
-    GetImagesInCompanyResponse
+    GetImagesInCompanyResponse, CreateImageInterface
 from s3_directory.storage import S3Client
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
@@ -19,10 +20,35 @@ from user_role.actions import __get_user_role_model
 image_router = APIRouter()
 
 
-@image_router.post("/create", response_model=CreateImageResponse)
-async def create(body: CreateImageRequest,
+@image_router.post("/upload", response_model=CreateImageInterface)
+async def upload(metadata: str = Form(...),
+                 file: UploadFile = File(...),
                  db: AsyncSession = Depends(get_db),
-                 cur_user: UserDB = Depends(__get_user_from_token)) -> CreateImageResponse:
+                 cur_user: UserDB = Depends(__get_user_from_token)) -> CreateImageInterface:
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="No file uploaded")
+    try:
+        data = UploadImageRequest.parse_raw(metadata)
+        # Проверка прав на создание изображения
+        cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=data.company_id)
+        if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+            raise HTTPException(status_code=403, detail='Forbidden')
+        s3client = S3Client()
+        await s3client.upload_file(file=file, file_path=data.file_path, company_id=data.company_id)
+        image_obj = await __create_image(image_body=CreateImageRequest(**data.dict(exclude_none=True),
+                                                                       file_name=file.filename, size=file.size),
+                                         user_id=cur_user.user_id, session=db)
+        return image_obj
+    except ValidationError as e:
+        raise HTTPException(status_code=400, detail="Bad request data")
+    except DBAPIError as e:
+        raise HTTPException(status_code=422, detail='Incorrect data')
+
+
+@image_router.post("/create_loaded_url", response_model=CreateImageResponse)
+async def create_loaded_url(body: CreateImageRequest,
+                            db: AsyncSession = Depends(get_db),
+                            cur_user: UserDB = Depends(__get_user_from_token)) -> CreateImageResponse:
     # Проверка прав на создание изображения
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id,
                                                       session=db, company_id=body.company_id)
@@ -88,6 +114,7 @@ async def get_image_by_id(image_id: UUID,
 async def get_images_by_company_id(company_id: UUID,
                                    db: AsyncSession = Depends(get_db),
                                    cur_user: UserDB = Depends(__get_user_from_token)) -> GetImagesInCompanyResponse:
+    # Проверка на существование компании
     company = await __get_company_by_id(company_id, db)
     if company is None:
         raise HTTPException(status_code=404,
@@ -119,8 +146,8 @@ async def delete_image(image_id: UUID,
         raise HTTPException(status_code=404, detail='Image with id {0} was deleted before'.format(image_id))
     try:
         s3client = S3Client()
-        await s3client.delete_object(file_path=del_image_obj.file_path, file_name=del_image_obj.file_name,
-                                     company_id=del_image_obj.company_id)
+        await s3client.delete_file(file_path=del_image_obj.file_path, file_name=del_image_obj.file_name,
+                                   company_id=del_image_obj.company_id)
         return DeleteImageResponse(deleted_image_id=del_image_id)
     except DBAPIError as e:
         raise HTTPException(status_code=422, detail='Incorrect data')
@@ -149,15 +176,15 @@ async def update_image_by_id(image_id: UUID,
         dict_file_data = __get_upd_file_data(upd_image_params, upd_image)
         if dict_file_data != {}:
             s3client = S3Client()
-            await s3client.update_file_place_object(old_file_name=upd_image.file_name, old_file_path=upd_image.file_path,
+            await s3client.update_file_place_object(old_file_name=upd_image.file_name,
+                                                    old_file_path=upd_image.file_path,
                                                     new_file_path=dict_file_data['file_path'],
                                                     new_file_name=dict_file_data['file_name'],
                                                     company_id=upd_image.company_id)
-            upd_image_id = await __update_image_by_id(update_image_params=upd_image_params,
-                                                      image_id=image_id, session=db)
-            if upd_image_id is None:
-                raise HTTPException(status_code=404, detail='Image with id {0} was deleted'.format(image_id))
-            return UpdateImageResponse(updated_image_id=upd_image_id)
+        upd_image_id = await __update_image_by_id(update_image_params=upd_image_params,
+                                                  image_id=image_id, session=db)
+        if upd_image_id is None:
+            raise HTTPException(status_code=404, detail='Image with id {0} was deleted'.format(image_id))
+        return UpdateImageResponse(updated_image_id=upd_image_id)
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
-
