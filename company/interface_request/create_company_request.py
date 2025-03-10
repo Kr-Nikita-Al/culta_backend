@@ -13,9 +13,6 @@ class CreateCompanyRequest(BaseModel):
     phone: constr()
     email: EmailStr
     order_number: Optional[conint()]
-    group_id: Optional[conint()]
-    image_picture_id: Optional[constr()]
-    image_icon_id: Optional[constr()]
     age_limit: StrictBool
     work_state: StrictBool
     start_time: time

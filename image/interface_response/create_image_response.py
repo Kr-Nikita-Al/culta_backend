@@ -10,6 +10,8 @@ class CreateImageInterface(BaseModelResponse):
     type_col: str
     image_type: str
     file_path: str
+    title: str
+    file_name: str
     resolution: str
     tags: str
     order_number: int

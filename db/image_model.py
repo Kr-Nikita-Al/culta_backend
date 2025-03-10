@@ -1,9 +1,7 @@
-import uuid
 from datetime import datetime
 
 from sqlalchemy import Column, String, ForeignKey, DateTime, Integer, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
 
 from db.base_model import Base
 from utils.constants import EMPTY_UUID
@@ -17,10 +15,11 @@ from utils.constants import EMPTY_UUID
 class ImageDB(Base):
     __tablename__ = 'image'
 
-    image_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    image_id = Column(UUID(as_uuid=True), primary_key=True)
 
     # Properties
-    file_name = Column(String(100), default='')
+    title = Column(String(100), default='')
+    file_name = Column(String(100))
     type_col = Column(String(100), default='')
     image_type = Column(String(100), default='')
     file_path = Column(String(1000), default='')

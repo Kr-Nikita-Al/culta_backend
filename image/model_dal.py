@@ -6,10 +6,8 @@ from fastapi import HTTPException
 from sqlalchemy import select, and_, update, delete
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import joinedload
 
 from db import ImageDB, CompanyDB
-from image.interface_response import GetImageInterface
 
 
 class ImageDal:
@@ -30,8 +28,10 @@ class ImageDal:
         if kwargs["width"] <= 0 or kwargs["height"] <= 0:
             raise HTTPException(status_code=422, detail='Incorrect width or height')
         new_image = ImageDB(
+            image_id=kwargs["image_id"],
             company_id=company_id_for_adding,
             company_group_id=kwargs["company_group_id"],
+            title=kwargs["title"],
             file_name=kwargs["file_name"],
             type_col=kwargs["type_col"],
             image_type=kwargs["image_type"],

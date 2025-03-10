@@ -4,6 +4,7 @@ from pydantic import BaseModel, constr, conint, StrictBool
 
 
 class UpdateImageRequest(BaseModel):
+    title: Optional[constr()]
     file_name: Optional[constr()]
     type_col: Optional[constr()]
     image_type: Optional[constr()]

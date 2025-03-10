@@ -5,7 +5,9 @@ from pydantic import BaseModel, constr, conint, StrictBool, confloat
 
 
 class CreateImageRequest(BaseModel):
+    image_id: UUID
     company_id: UUID
+    title: constr()
     file_name: constr()
     file_path: constr()
     size: confloat()

@@ -1,3 +1,5 @@
+import os
+import uuid
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
@@ -33,11 +35,17 @@ async def upload(metadata: str = Form(...),
         cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=data.company_id)
         if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
             raise HTTPException(status_code=403, detail='Forbidden')
-        s3client = S3Client()
-        await s3client.upload_file(file=file, file_path=data.file_path, company_id=data.company_id)
-        image_obj = await __create_image(image_body=CreateImageRequest(**data.dict(exclude_none=True),
-                                                                       file_name=file.filename, size=file.size),
-                                         user_id=cur_user.user_id, session=db)
+        # Переименование названия изображения на служебное и сохранение в БД
+        image_id = uuid.uuid4()
+        new_filename = f"image_{image_id}" + os.path.splitext(file.filename)[1]
+        image_body = CreateImageRequest(**data.dict(exclude_none=True), image_id=image_id, title=file.filename,
+                                        file_name=new_filename, size=file.size)
+        image_obj = await __create_image(image_body=image_body, user_id=cur_user.user_id, session=db)
+        # Сохранение в S3 storage
+        if image_obj is not None:
+            s3client = S3Client()
+            await s3client.upload_file(file=file, file_path=data.file_path,
+                                       filename=new_filename,company_id=data.company_id)
         return image_obj
     except ValidationError as e:
         raise HTTPException(status_code=400, detail="Bad request data")
@@ -77,10 +85,7 @@ async def get_used_image_by_id(image_id: UUID,
     try:
         s3client = S3Client()
         url = await s3client.generate_get_presigned_url(file_path=image_obj.file_path, file_name=image_obj.file_name)
-        return GetImageResponse(
-            url=url,
-            image=image_obj
-        )
+        return GetImageResponse(url=url, image=image_obj)
     except DBAPIError as e:
         raise HTTPException(status_code=422, detail='Incorrect data')
 
@@ -102,10 +107,7 @@ async def get_image_by_id(image_id: UUID,
         s3client = S3Client()
         url = await s3client.generate_get_presigned_url(file_path=image_obj.file_path, file_name=image_obj.file_name,
                                                         company_id=image_obj.company_id)
-        return GetImageResponse(
-            url=url,
-            image=image_obj
-        )
+        return GetImageResponse(url=url, image=image_obj)
     except DBAPIError as e:
         raise HTTPException(status_code=422, detail='Incorrect data')
 

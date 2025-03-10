@@ -139,9 +139,10 @@ class S3Client:
         except (ClientError, S3UploadFailedError) as e:
             raise HTTPException(status_code=422, detail=f"Error: {e.response['Error']['Message']}")
 
-    async def upload_file(self, file: UploadFile, file_path: str, company_id: UUID):
+    async def upload_file(self, file: UploadFile, file_path: str, filename: str, company_id: UUID):
         """
         Метод динамической генерации преподписанного урла для загрузки файла
+        :param filename: название файла
         :param file: файл изображения
         :param file_path: путь до файла
         :param company_id: id компании, где есть права для размещения изображения
@@ -150,14 +151,14 @@ class S3Client:
         if 'image' not in file.content_type:
             raise HTTPException(status_code=422, detail='Incorrect type file')
         obj_dict = await self.get_objects_by_dir_name(dir_name=file_path)
-        if not check_file_path_put(file_path=file_path, obj_dict=obj_dict, file_name=file.filename,
+        if not check_file_path_put(file_path=file_path, obj_dict=obj_dict, file_name=filename,
                                    company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect file path or file name')
         if not check_size_limits(obj_dict=obj_dict, file_size=file.size):
             raise HTTPException(status_code=422, detail='Incorrect file size')
         try:
             async with self.__get_client() as client:
-                await client.put_object(Bucket=self.bucket_name, Key=file_path + file.filename,
+                await client.put_object(Bucket=self.bucket_name, Key=file_path + filename,
                                         Body=await file.read(),  ContentType=file.content_type)
         except NoCredentialsError:
             raise HTTPException(status_code=403, detail="Keys not found")

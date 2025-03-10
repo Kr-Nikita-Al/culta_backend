@@ -13,8 +13,7 @@ class CompanyDal:
         self.db_session = db_session
 
     async def create_company(self, company_name: str, address: str, phone: str, email: str,
-                             order_number: int, group_id: int, image_picture_id: str,
-                             image_icon_id: str, age_limit: bool, work_state: bool, start_time: time,
+                             order_number: int, age_limit: bool, work_state: bool, start_time: time,
                              over_time: time, creator_user_id: UUID
                              ) -> CompanyDB:
         new_company = CompanyDB(
@@ -23,9 +22,6 @@ class CompanyDal:
             phone=phone,
             email=email,
             order_number=order_number,
-            group_id=group_id,
-            image_picture_id=image_picture_id,
-            image_icon_id=image_icon_id,
             age_limit=age_limit,
             work_state=work_state,
             start_time=start_time,

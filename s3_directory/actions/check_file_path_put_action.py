@@ -13,7 +13,6 @@ def check_file_path_put(obj_dict: Dict, file_path: str, file_name: str, company_
    4) Совпадения пути папки компании, где хотят положить файл, с путем компании, на которую выданы права доступа
    5) Корректность расширения файла
    6) Наличия такого пути в S3Storage
-   7) Отсутствие файла с таким названием
    :return: возможность загрузки файла
    """
     if file_path.count('/') < 2 or file_path[-1] != '/' or file_name.count('.') < 1:
@@ -23,6 +22,4 @@ def check_file_path_put(obj_dict: Dict, file_path: str, file_name: str, company_
     if real_dir_path != request_dir_path:
         return False
     enlargement = file_name.split('.')[1]
-    return file_path in obj_dict.keys() and \
-        enlargement in IMAGE_ENLARGEMENTS and \
-        file_path + file_name not in obj_dict.keys()
+    return file_path in obj_dict.keys() and enlargement in IMAGE_ENLARGEMENTS

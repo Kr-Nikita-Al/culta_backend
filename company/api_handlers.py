@@ -34,7 +34,7 @@ async def create_company(body: CreateCompanyRequest,
         company = await __create_company(body, cur_user.user_id, db)
         s3client = S3Client()
         await s3client.create_directory(dir_path=BASE_STORAGE_DIRECTORY.COMPANY,
-                                        dir_name="company_{0}".format(str(company.company_id)))
+                                        dir_name="company_{0}/".format(str(company.company_id)))
         return company
     except DBAPIError as e:
         raise HTTPException(status_code=422,

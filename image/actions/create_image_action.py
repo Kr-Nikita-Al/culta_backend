@@ -17,6 +17,7 @@ async def __create_image(image_body: CreateImageRequest, user_id: UUID, session:
             image_id=image_db.image_id,
             company_id=image_db.company_id,
             company_group_id=image_db.company_group_id,
+            title=image_db.title,
             file_name=image_db.file_name,
             type_col=image_db.type_col,
             image_type=image_db.image_type,
