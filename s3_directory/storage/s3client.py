@@ -7,7 +7,7 @@ from boto3.exceptions import S3UploadFailedError
 from botocore.exceptions import NoCredentialsError, ClientError
 from fastapi import HTTPException, UploadFile
 
-from s3_directory.actions import check_file_path_put, check_size_limits, check_file_path_get, check_dir_path_rename
+from s3_directory.actions import check_file_path_put, check_size_limits, check_path_getting, check_dir_path_rename
 from settings import AWS_BUCKET_NAME
 from utils.constants import CONFIG_S3CLIENT, BASE_STORAGE_DIRECTORY, EMPTY_UUID
 
@@ -52,7 +52,7 @@ class S3Client:
         :return: url
         """
         obj_dict = await self.get_all_objects()
-        if not check_file_path_get(file_path=old_file_path, obj_dict=obj_dict, company_id=company_id):
+        if not check_path_getting(obj_path=old_file_path + old_file_name, obj_dict=obj_dict, company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect old file name')
         if not check_file_path_put(file_path=new_file_path, obj_dict=obj_dict, file_name=new_file_name,
                                    company_id=company_id):
@@ -80,7 +80,7 @@ class S3Client:
         :return: url
         """
         obj_dict = await self.get_all_objects()
-        if not check_file_path_get(file_path=file_path, obj_dict=obj_dict, company_id=company_id):
+        if not check_path_getting(obj_path=file_path + file_name, obj_dict=obj_dict, company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect file path')
         try:
             async with self.__get_client() as client:
@@ -98,7 +98,7 @@ class S3Client:
         :return: url
         """
         obj_dict = await self.get_all_objects()
-        if not check_file_path_get(file_path=file_path, obj_dict=obj_dict, company_id=company_id):
+        if not check_path_getting(obj_path=file_path + file_name, obj_dict=obj_dict, company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect file path')
         try:
             async with self.__get_client() as client:
@@ -215,10 +215,8 @@ class S3Client:
 
     async def delete_directory(self, dir_path: str, dir_name: str, company_id: UUID):
         obj_dict = await self.get_objects_by_dir_name(dir_name=dir_path)
-        if dir_path + dir_name not in obj_dict.keys():
-            raise HTTPException(status_code=422, detail='Directory not exist')
-        if not check_file_path_get(file_path=dir_path, obj_dict=obj_dict, company_id=company_id):
-            raise HTTPException(status_code=422, detail='Incorrect file path')
+        if not check_path_getting(obj_path=dir_path + dir_name, obj_dict=obj_dict, company_id=company_id):
+            raise HTTPException(status_code=422, detail='Incorrect dir path')
         async with self.__get_client() as client:
             try:
                 paginator = client.get_paginator('list_objects_v2')

@@ -28,7 +28,7 @@ CONFIG_S3CLIENT = {
     "region_name": 'ru-central1'
 }
 
-LIMIT_FILE_SIZE = 500 * 1024 * 8  # 500kb
-LIMIT_DIRECTORY_SIZE = 50 * 1024 * 1024 * 8  # 50mb
+LIMIT_FILE_SIZE = 2 * 1024 * 1024  # 2mb
+LIMIT_DIRECTORY_SIZE = 100 * 1024 * 1024  # 100mb
 IMAGE_ENLARGEMENTS = ['svg', 'pdf', 'eps', 'ai', 'cdr', 'png', 'jpeg', 'jpg', 'gif',
                       'raw', 'tiff', 'bmp', 'psd', 'webp', 'heif', 'avif']
