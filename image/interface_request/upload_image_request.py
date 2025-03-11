@@ -1,16 +1,12 @@
 from typing import Optional
 from uuid import UUID
 
-from pydantic import BaseModel, constr, conint, StrictBool, confloat
+from pydantic import BaseModel, constr, conint, StrictBool
 
 
-class CreateImageRequest(BaseModel):
-    image_id: UUID
+class UploadImageRequest(BaseModel):
     company_id: UUID
-    title: constr()
-    file_name: constr()
     file_path: constr()
-    size: confloat()
     width: conint()
     height: conint()
     type_col: Optional[constr()]

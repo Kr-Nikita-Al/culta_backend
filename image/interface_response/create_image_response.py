@@ -4,13 +4,14 @@ from uuid import UUID
 from utils.base_model_response import BaseModelResponse
 
 
-class CreateImageResponse(BaseModelResponse):
+class CreateImageInterface(BaseModelResponse):
     image_id: UUID
     company_id: UUID
-    title: str
     type_col: str
     image_type: str
-    url: str
+    file_path: str
+    title: str
+    file_name: str
     resolution: str
     tags: str
     order_number: int
@@ -18,7 +19,12 @@ class CreateImageResponse(BaseModelResponse):
     width: int
     height: int
     is_hidden: bool
-    is_archived: bool
+    is_used: bool
     company_group_id: UUID
     creator_id: UUID
     time_created: datetime
+
+
+class CreateImageResponse(BaseModelResponse):
+    url: str
+    image: CreateImageInterface

@@ -1,2 +1,4 @@
 from image.interface_request.create_image_request import CreateImageRequest
 from image.interface_request.update_image_request import UpdateImageRequest
+from image.interface_request.upload_image_request import UploadImageRequest
+

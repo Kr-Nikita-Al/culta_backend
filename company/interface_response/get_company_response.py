@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime, time
 from pydantic import EmailStr
 
-from image.interface_response import GetImageResponse
+from image.interface_response import GetImageInterface
 from navigations.screen.interface_response import GetScreenResponse
 from utils.base_model_response import BaseModelResponse
 
@@ -33,4 +33,3 @@ class GetCompanyResponse(BaseModelResponse):
     start_time: time
     over_time: time
     screens: List[GetScreenIDResponse]
-    images: List[GetImageResponse]

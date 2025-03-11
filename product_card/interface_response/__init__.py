@@ -2,4 +2,6 @@ from product_card.interface_response.create_product_card_response import CreateP
 from product_card.interface_response.get_product_card_response import GetProductCardResponse
 from product_card.interface_response.delete_product_card_response import DeleteProductCardResponse
 from product_card.interface_response.update_product_card_response import UpdateProductResponse
+from product_card.interface_response.get_products_in_company_response import GetProductsInCompanyResponse
+
 
