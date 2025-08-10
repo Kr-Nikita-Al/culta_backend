@@ -1,6 +1,7 @@
 import uvicorn
 from fastapi import FastAPI, APIRouter
 
+from settings import ENV
 from s3_directory import s3_directory_router
 from settings import APP_PORT
 from auth import login_router
@@ -11,6 +12,7 @@ from navigations import item_router, container_router, screen_router
 from product_card import product_card_router
 from user_role import user_role_router
 from utils.ping_api import service_router
+from fastapi.middleware.cors import CORSMiddleware
 
 #############################
 # БЛОК ОПИСАНИЯ API ROUTES  #
@@ -21,6 +23,28 @@ app = FastAPI(title="culta_backend")
 
 # Создаем основной роутер
 main_api_router = APIRouter()
+
+# Безопасная конфигурация для продакшена
+allowed_origins = ["*"]
+
+# Разрешить локальные домены для разработки
+if ENV == "development":
+    allowed_origins.extend([
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://0.0.0.0:3000"
+    ])
+
+# Настройки CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+    expose_headers=["Content-Range", "X-Total-Count"],
+    max_age=600  # Кешировать предварительные запросы 10 минут
+)
 
 # Добавляем роутеры моделей
 main_api_router.include_router(service_router, prefix="/ping", tags=["ping"])
