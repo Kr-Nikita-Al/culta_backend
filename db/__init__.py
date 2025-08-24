@@ -6,6 +6,7 @@ from db.screen_model import ScreenDB
 from db.image_model import ImageDB
 from db.user_model import UserDB
 from db.user_role_model import UserRoleDB
+from db.auth_account_model import AuthAccountDB, AuthProvider
 
 
 

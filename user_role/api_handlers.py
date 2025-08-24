@@ -48,7 +48,8 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
     if cur_user.email not in ACCESS_SUPER_ADMINS:
         raise HTTPException(status_code=403, detail='Forbidden')
     user_role_params = GrantUserRoleRequest(user_id=cur_user.user_id,
-                                            role=PortalRole.PORTAL_ROLE_SUPER_ADMIN)
+                                            role=PortalRole.PORTAL_ROLE_SUPER_ADMIN,
+                                            creator_id=cur_user.user_id)
     try:
         return await __grant_user_role(user_role_params, db)
     except DBAPIError as e:
