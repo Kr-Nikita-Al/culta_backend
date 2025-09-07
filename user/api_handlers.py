@@ -63,11 +63,15 @@ async def delete_user(user_id: UUID,
 
 
 @user_router.get('/get_by_id', response_model=GetUserResponse)
-async def get_user_by_id(user_id: UUID, db: AsyncSession = Depends(get_db)) -> GetUserResponse:
+async def get_user_by_id(user_id: UUID,
+                         db: AsyncSession = Depends(get_db),
+                         current_user: UserDB = Depends(__get_user_from_token)) -> GetUserResponse:
     user = await __get_user_by_id(user_id, db)
     if user is None:
         raise HTTPException(status_code=404,
                             detail='User with id {0} is not found or was deleted before'.format(user_id))
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
     return user
 
 

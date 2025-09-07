@@ -45,6 +45,9 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
     :param cur_user: авторизованный пользователь
     :return: id клиента, выданному права супер администратора
     """
+    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db)
+    if cur_user_role_model.is_super_admin:
+        raise HTTPException(status_code=409, detail='User is already super admin')
     if cur_user.email not in ACCESS_SUPER_ADMINS:
         raise HTTPException(status_code=403, detail='Forbidden')
     user_role_params = GrantUserRoleRequest(user_id=cur_user.user_id,
@@ -72,6 +75,7 @@ async def grant_admin_privilege(promo_user_id: UUID,
     :param cur_user: авторизованный пользователь
     :return: id клиента, выданному права администратора
     """
+    print(promo_user_id, company_id)
     # Проверка на возможность выделения прав авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)

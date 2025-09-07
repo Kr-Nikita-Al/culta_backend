@@ -27,7 +27,8 @@ async def __get_or_create_auth_user(
 ) -> UserDB:
     # Поиск существующей привязки
     auth_account = await __get_auth_account_by_provider(provider_user_id=provider_user_id,
-                                                        provider=provider, session=db)
+                                                        provider=provider,
+                                                        session=db)
     if auth_account:
         return auth_account.user
     # Поиск пользователя по email

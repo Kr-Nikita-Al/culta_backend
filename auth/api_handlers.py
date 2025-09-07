@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import RedirectResponse
 
 from auth.actions_by_yandex import __get_or_create_auth_user
-from auth.model_dal import AuthDal
+from auth.model_dal import AuthDal, create_access_token
 from db.auth_account_model import AuthProvider
 from settings import YANDEX_CLIENT_ID, YANDEX_REDIRECT_URI, YANDEX_CLIENT_SECRET, ACCESS_TOKEN_EXPIRE_MINUTES
 from auth.actions_by_login.authenticate_user_action import authenticate_user_by_login
@@ -25,14 +25,13 @@ login_router = APIRouter()
 async def login_for_access_token(
         form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)
 ):
-    auth_dal = AuthDal(db_session=db)
     user = await authenticate_user_by_login(form_data.username, form_data.password, db)
     if not user:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect username or password",
         )
-    access_token = auth_dal.create_access_token(
+    access_token = create_access_token(
         data={"sub": user.email, "other_custom_data": [1, 2, 3, 4]},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
@@ -53,8 +52,8 @@ async def auth_yandex():
 
 @login_router.get("/auth/yandex/callback")
 async def auth_yandex_callback(
-        code: str | None = None,
-        error: str | None = None,
+        code: str = None,
+        error: str = None,
         db: AsyncSession = Depends(get_db)
 ):
     # Обработка ошибок
@@ -110,8 +109,7 @@ async def auth_yandex_callback(
         surname=surname,
         phone=phone
     )
-    auth_dal = AuthDal()
-    access_token = auth_dal.create_access_token(
+    access_token = create_access_token(
         data={"sub": email, "other_custom_data": [1, 2, 3, 4]},
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )

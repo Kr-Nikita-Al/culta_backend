@@ -5,7 +5,9 @@ from auth.model_dal import AuthDal
 from db import AuthAccountDB, AuthProvider
 
 
-async def __get_auth_account_by_provider(provider_user_id: str, provider: AuthProvider, session: AsyncSession) -> \
+async def __get_auth_account_by_provider(provider_user_id: str,
+                                         provider: AuthProvider,
+                                         session: AsyncSession) -> \
         Union[AuthAccountDB, None]:
     async with session.begin():
         auth_dal = AuthDal(session)
