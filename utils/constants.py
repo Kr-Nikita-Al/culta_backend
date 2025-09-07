@@ -4,6 +4,7 @@ from enum import Enum
 from settings import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 EMPTY_UUID = uuid.UUID(int=0)
+EMPTY_PHONE = '89999999999'
 
 
 class PortalRole(str, Enum):

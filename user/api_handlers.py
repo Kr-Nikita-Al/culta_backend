@@ -17,7 +17,9 @@ from db.session import get_db
 
 from fastapi import APIRouter
 
-from utils.constants import BASE_STORAGE_DIRECTORY
+from user_role.actions import __grant_user_role
+from user_role.interface_request import GrantUserRoleRequest
+from utils.constants import BASE_STORAGE_DIRECTORY, PortalRole
 
 user_router = APIRouter()
 
@@ -29,6 +31,9 @@ async def create_user(body: CreateUserRequest, db: AsyncSession = Depends(get_db
         s3client = S3Client()
         await s3client.create_directory(dir_path=BASE_STORAGE_DIRECTORY.USER,
                                         dir_name="user_{0}".format(str(user.user_id)))
+        _ = await __grant_user_role(GrantUserRoleRequest(user_id=user.user_id,
+                                                         role=PortalRole.PORTAL_ROLE_USER,
+                                                         creator_id=user.user_id), db)
         return user
     except DBAPIError as e:
         raise HTTPException(status_code=422,
@@ -58,11 +63,15 @@ async def delete_user(user_id: UUID,
 
 
 @user_router.get('/get_by_id', response_model=GetUserResponse)
-async def get_user_by_id(user_id: UUID, db: AsyncSession = Depends(get_db)) -> GetUserResponse:
+async def get_user_by_id(user_id: UUID,
+                         db: AsyncSession = Depends(get_db),
+                         current_user: UserDB = Depends(__get_user_from_token)) -> GetUserResponse:
     user = await __get_user_by_id(user_id, db)
     if user is None:
         raise HTTPException(status_code=404,
                             detail='User with id {0} is not found or was deleted before'.format(user_id))
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
     return user
 
 

@@ -1,12 +1,10 @@
-from datetime import time
-from typing import Union, List
+from typing import Union
 from uuid import UUID
 
 from sqlalchemy import select, update, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from db.user_model import UserDB
-from utils.constants import PortalRole
 from fastapi import HTTPException
 
 

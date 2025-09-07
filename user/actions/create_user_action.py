@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from user.interface_request import CreateUserRequest
-from utils.constants import PortalRole
 from user.model_dal import UserDAL
 from user.interface_response import CreateUserResponse
 from utils.hashing import Hasher

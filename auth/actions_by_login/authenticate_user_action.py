@@ -6,7 +6,7 @@ from utils.hashing import Hasher
 from db.user_model import UserDB
 
 
-async def authenticate_user(
+async def authenticate_user_by_login(
     email: str, password: str, db: AsyncSession
 ) -> Union[UserDB, None]:
     user = await __get_user_by_email_for_auth(email=email, session=db)
