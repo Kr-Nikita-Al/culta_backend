@@ -1,9 +1,13 @@
+import urllib
 from typing import Dict
+from urllib.parse import unquote
 from uuid import UUID
 
-from fastapi import APIRouter, HTTPException, Depends
+import httpx
+from fastapi import APIRouter, HTTPException, Depends, Query
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
 from company.actions import __get_company_by_id
 from db import UserDB

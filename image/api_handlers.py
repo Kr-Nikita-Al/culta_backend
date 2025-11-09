@@ -1,11 +1,14 @@
 import os
 import uuid
+from urllib.parse import unquote
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form, Query
 from pydantic import ValidationError
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
+from starlette.responses import StreamingResponse
 
 from company.actions import __get_company_by_id
 from db import UserDB
@@ -18,6 +21,7 @@ from image.interface_response import CreateImageResponse, DeleteImageResponse, U
 from s3_directory.storage import S3Client
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
+from utils.constants import QUOTA_COUNT_IMAGES_BY_COMPANY
 
 image_router = APIRouter()
 
@@ -35,6 +39,10 @@ async def upload(metadata: str = Form(...),
         cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=data.company_id)
         if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
             raise HTTPException(status_code=403, detail='Forbidden')
+        # Проверка на кол-во изображений в рамках данной компании
+        images = await __get_images_by_company_id(data.company_id, db)
+        if len(images) > QUOTA_COUNT_IMAGES_BY_COMPANY:
+            raise HTTPException(status_code=405, detail='Quota objects over limited')
         # Переименование названия изображения на служебное и сохранение в БД
         image_id = uuid.uuid4()
         new_filename = f"image_{image_id}" + os.path.splitext(file.filename)[1]
@@ -174,14 +182,13 @@ async def update_image_by_id(image_id: UUID,
     if upd_image_params == {}:
         raise HTTPException(status_code=422, detail='All fields are empty')
     try:
-        # Если изменили название или путь файла, то сторедже его также надо обновить
+        # Если изменили путь файла, то сторедже его также надо обновить
         dict_file_data = __get_upd_file_data(upd_image_params, upd_image)
-        if dict_file_data != {}:
+        if dict_file_data != {} and 'file_path' in upd_image_params:
             s3client = S3Client()
-            await s3client.update_file_place_object(old_file_name=upd_image.file_name,
+            await s3client.update_file_place_object(file_name=upd_image.file_name,
                                                     old_file_path=upd_image.file_path,
                                                     new_file_path=dict_file_data['file_path'],
-                                                    new_file_name=dict_file_data['file_name'],
                                                     company_id=upd_image.company_id)
         upd_image_id = await __update_image_by_id(update_image_params=upd_image_params,
                                                   image_id=image_id, session=db)
@@ -190,3 +197,121 @@ async def update_image_by_id(image_id: UUID,
         return UpdateImageResponse(updated_image_id=upd_image_id)
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
+
+
+@image_router.get("/download")
+async def download_image_proxy(image_url: str,
+                               company_id: UUID,
+                               filename: str = "image.png",
+                               cur_user: UserDB = Depends(__get_user_from_token),
+                               db: AsyncSession = Depends(get_db)):
+    # Проверка прав на получение изображения
+    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
+                                                      company_id=company_id)
+    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    try:
+        # Декодируем URL
+        decoded_url = unquote(image_url)
+        async with httpx.AsyncClient() as client:
+            # Загружаем изображение из Yandex Cloud Storage
+            response = await client.get(decoded_url, timeout=30.0)
+            if response.status_code != 200:
+                raise HTTPException(status_code=response.status_code, detail="Error downloading image")
+            # Определяем Content-Type
+            content_type = response.headers.get("content-type", "application/octet-stream")
+            # Используем переданное имя файла или извлекаем из URL
+            if filename == "image.png":
+                # Извлекаем имя файла из URL, если не передано
+                filename = decoded_url.split('/')[-1].split('?')[0]
+            content_disposition = f"attachment; filename={filename}"
+            # Возвращаем изображение как поток
+            return StreamingResponse(
+                content=response.iter_bytes(),
+                media_type=content_type,
+                headers={
+                    "Content-Disposition": content_disposition,
+                    "Access-Control-Allow-Origin": "*"
+                }
+            )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@image_router.get("/get_folder_images")
+async def get_folder_images(
+        company_id: UUID,
+        folder_path: str,
+        cur_user: UserDB = Depends(__get_user_from_token),
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Возвращает все изображения в указанной папке (и подпапках, если нужно)
+    с уже сгенерированными URL
+    """
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    # Проверка прав на создание изображения
+    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id,
+                                                      session=db, company_id=company_id)
+    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    images = await __get_images_by_company_id(company_id, db)
+    # Фильтрация на нужную папку
+    images = [image for image in images if folder_path == image.file_path]
+
+    try:
+        s3client = S3Client()
+        # Генерация URL для каждого изображения
+        for i in range(len(images)):
+            try:
+                url = await s3client.generate_get_presigned_url(file_path=images[i].file_path, file_name=images[i].file_name,
+                                                                company_id=images[i].company_id)
+
+                images[i].url = url
+            except Exception:
+                continue
+    except DBAPIError as e:
+        raise HTTPException(status_code=422, detail='Incorrect data')
+    print(images)
+    return {"images": images}
+
+
+@image_router.get("/refresh_folder_urls")
+async def refresh_folder_urls(
+        company_id: UUID,
+        folder_path: str,
+        cur_user: UserDB = Depends(__get_user_from_token),
+        db: AsyncSession = Depends(get_db)
+):
+    """
+    Обновляет URL для всех изображений в указанной папке
+    """
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    # Проверка прав на создание изображения
+    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id,
+                                                      session=db, company_id=company_id)
+    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    images = await __get_images_by_company_id(company_id, db)
+    # Фильтрация на нужную папку
+    images = [image for image in images if folder_path in image.file_path]
+
+    try:
+        s3client = S3Client()
+        # Генерация URL для каждого изображения
+        updated_urls = {}
+        for image in images:
+            updated_urls[image.image_id] = await s3client.generate_put_presigned_url(file_path=image.file_path,
+                                                                                     file_name=image.file_name,
+                                                                                     file_size=image.size,
+                                                                                     company_id=image.company_id)
+    except DBAPIError as e:
+        raise HTTPException(status_code=422, detail='Incorrect data')
+    return {"urls": updated_urls}
+

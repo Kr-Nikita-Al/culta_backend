@@ -18,5 +18,5 @@ async def __create_auth_account(auth_account_body: CreateAuthAccountRequest, ses
             auth_id=auth_db.auth_id,
             provider_user_id=auth_db.provider_user_id,
             provider=auth_db.provider,
-            user_id=auth_db.user_id
+            user_id=auth_db.user_id,
         )

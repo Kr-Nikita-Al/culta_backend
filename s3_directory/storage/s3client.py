@@ -46,27 +46,27 @@ class S3Client:
         return {k: v for k, v in obj_dict.items() if dir_name in k}
 
     async def update_file_place_object(self, old_file_path: str, new_file_path: str,
-                                       old_file_name: str, new_file_name: str, company_id: UUID):
+                                       file_name: str, company_id: UUID):
         """
-        Метод обновления расположения и имени файла
+        Метод обновления расположения файла
         :return: url
         """
         obj_dict = await self.get_all_objects()
-        if not check_path_getting(obj_path=old_file_path + old_file_name, obj_dict=obj_dict, company_id=company_id):
+        if not check_path_getting(obj_path=old_file_path + file_name, obj_dict=obj_dict, company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect old file name')
-        if not check_file_path_put(file_path=new_file_path, obj_dict=obj_dict, file_name=new_file_name,
+        if not check_file_path_put(file_path=new_file_path, obj_dict=obj_dict, file_name=file_name,
                                    company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect file path or new file name')
         try:
             async with self.__get_client() as client:
                 # 1. Копируем объект с новым именем
-                copy_response = await client.copy_object(Bucket=self.bucket_name, Key=new_file_path + new_file_name,
+                copy_response = await client.copy_object(Bucket=self.bucket_name, Key=new_file_path + file_name,
                                                          CopySource={'Bucket': self.bucket_name,
-                                                                     'Key': old_file_path + old_file_name})
+                                                                     'Key': old_file_path + file_name})
                 # 2. Проверяем успешность копирования и удаляем исходный файл
                 if copy_response['ResponseMetadata']['HTTPStatusCode'] != 200:
                     raise HTTPException(status_code=404, detail="Renamed file not found")
-                _ = await client.delete_object(Bucket=self.bucket_name, Key=old_file_path + old_file_name)
+                _ = await client.delete_object(Bucket=self.bucket_name, Key=old_file_path + file_name)
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="File not found")
         except NoCredentialsError:
@@ -102,7 +102,7 @@ class S3Client:
             raise HTTPException(status_code=422, detail='Incorrect file path')
         try:
             async with self.__get_client() as client:
-                url = await client.generate_presigned_url(ClientMethod='get_object', ExpiresIn=120,
+                url = await client.generate_presigned_url(ClientMethod='get_object', ExpiresIn=600,
                                                           Params={'Bucket': self.bucket_name,
                                                                   'Key': file_path + file_name})
                 return url

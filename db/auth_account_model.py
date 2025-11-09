@@ -4,8 +4,10 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy.orm import relationship
 from db.base_model import Base
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy import Enum as SQLEnum
+
+from utils.constants import EMPTY_UUID
 
 
 class AuthProvider(PyEnum):
