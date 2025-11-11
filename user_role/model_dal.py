@@ -23,7 +23,7 @@ class UserRoleDAL:
             user_id=user_id,
             company_id=company_id,
             role=role,
-            creator_id=creator_id
+            creator_id=creator_id,
         )
         self.db_session.add(new_user_role)
         await self.db_session.flush()

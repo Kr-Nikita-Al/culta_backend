@@ -35,6 +35,11 @@ async def get_user_roles_in_company(company_id: UUID,
                                     current_user: UserDB = Depends(__get_user_from_token)) -> List:
     return await __get_user_roles_by_company_id(current_user.user_id, company_id, db)
 
+# @user_role_router.post('/set_avatar_by_role', response_model=List)
+# async def set_avatar_by_role(company_id: UUID,
+#                              db: AsyncSession = Depends(get_db),
+#                              current_user: UserDB = Depends(__get_user_from_token)) -> List:
+#     return await __get_user_roles_by_company_id(current_user.user_id, company_id, db)
 
 @user_role_router.post('/grant_super_admin_privilege', response_model=GrantUserRoleResponse)
 async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),

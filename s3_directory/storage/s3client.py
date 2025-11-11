@@ -154,7 +154,9 @@ class S3Client:
         if not check_file_path_put(file_path=file_path, obj_dict=obj_dict, file_name=filename,
                                    company_id=company_id):
             raise HTTPException(status_code=422, detail='Incorrect file path or file name')
-        if not check_size_limits(obj_dict=obj_dict, file_size=file.size):
+        # Проверяем, что объем файла входит по лимитам как отдельно так и в сторедж
+        storage_objects = await self.get_objects_by_dir_name(dir_name=f'company_images/company_{company_id}/')
+        if not check_size_limits(obj_dict=storage_objects, file_size=file.size):
             raise HTTPException(status_code=422, detail='Incorrect file size')
         try:
             async with self.__get_client() as client:

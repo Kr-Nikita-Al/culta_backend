@@ -13,11 +13,12 @@ from company.actions import __get_company_by_id
 from db import UserDB
 from db.session import get_db
 from image.actions import __get_images_by_company_id, __update_image_by_id, __delete_image
+from s3_directory.interface_response import GetStorageLimitsInCompanyResponse
 from s3_directory.storage.s3client import S3Client
 from s3_directory.interface_request import CreateDirectoryRequest, RenameDirectoryRequest, DeleteDirectoryRequest
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
-from utils.constants import BASE_STORAGE_DIRECTORY
+from utils.constants import BASE_STORAGE_DIRECTORY, QUOTA_COUNT_IMAGES_BY_COMPANY, QUOTA_STORAGE_SIZE
 
 s3_directory_router = APIRouter()
 
@@ -52,6 +53,39 @@ async def get_objects_in_company(company_id: UUID,
     s3client = S3Client()
     obj_dict = await s3client.get_objects_by_dir_name(dir_name="company_{0}".format(str(company_id)))
     return obj_dict
+
+
+@s3_directory_router.get('/get_storage_info_company_by_id', response_model=GetStorageLimitsInCompanyResponse)
+async def get_storage_info_company_by_id(company_id: UUID,
+                                         db: AsyncSession = Depends(get_db),
+                                         cur_user: UserDB = Depends(__get_user_from_token)) -> GetStorageLimitsInCompanyResponse:
+    """
+    TODO: сделать гибкую настройку лимитов в зависимости от тарифа компании
+    :param company_id:
+    :param db:
+    :param cur_user:
+    :return:
+    """
+    # Проверка на существование компании
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    # Проверка прав на получение лимитов
+    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id,
+                                                      session=db, company_id=company_id)
+    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    try:
+        images = await __get_images_by_company_id(company_id, db)
+        s3client = S3Client()
+        storage_objects = await s3client.get_objects_by_dir_name(dir_name=f'company_images/company_{company_id}/')
+        return GetStorageLimitsInCompanyResponse(quota_count_images=QUOTA_COUNT_IMAGES_BY_COMPANY,
+                                                 quota_storage_size=QUOTA_STORAGE_SIZE,
+                                                 used_count=len(images),
+                                                 used_size=sum(list(storage_objects.values())))
+    except DBAPIError as e:
+        raise HTTPException(status_code=422, detail='Incorrect data')
 
 
 @s3_directory_router.patch('/rename', response_model=Dict)

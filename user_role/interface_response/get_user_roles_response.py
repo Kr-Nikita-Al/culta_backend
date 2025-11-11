@@ -7,3 +7,4 @@ from utils.constants import PortalRole
 class GetUserRolesResponse(BaseModelResponse):
     company_id: UUID
     role: PortalRole
+    avatar_id: UUID

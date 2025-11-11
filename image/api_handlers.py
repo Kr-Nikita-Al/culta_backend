@@ -84,19 +84,21 @@ async def create_loaded_url(body: CreateImageRequest,
 
 
 @image_router.get('/get_used_by_id', response_model=GetImageResponse)
-async def get_used_image_by_id(image_id: UUID,
-                               db: AsyncSession = Depends(get_db)) -> GetImageResponse:
-    image_obj = await __get_image_by_id(image_id=image_id, session=db, is_used=True)
-    if image_obj is None:
+async def get_images_by_company_id(company_id: UUID,
+                                   db: AsyncSession = Depends(get_db),
+                                   cur_user: UserDB = Depends(__get_user_from_token)) -> GetImagesInCompanyResponse:
+    # Проверка на существование компании
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
         raise HTTPException(status_code=404,
-                            detail='Image with id {0} is not found or was not used before'.format(image_id))
-    try:
-        s3client = S3Client()
-        url = await s3client.generate_get_presigned_url(file_path=image_obj.file_path, file_name=image_obj.file_name)
-        return GetImageResponse(url=url, image=image_obj)
-    except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
-
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    # Проверка прав на создание изображения
+    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id,
+                                                      session=db, company_id=company_id)
+    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    images = await __get_images_by_company_id(company_id, db)
+    return GetImagesInCompanyResponse(images=images)
 
 @image_router.get('/get_by_id', response_model=GetImageResponse)
 async def get_image_by_id(image_id: UUID,

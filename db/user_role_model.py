@@ -30,4 +30,4 @@ class UserRoleDB(Base):
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     time_created = Column(DateTime(timezone=True), default=datetime.now())
-
+    avatar_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
