@@ -18,7 +18,7 @@ from s3_directory.storage.s3client import S3Client
 from s3_directory.interface_request import CreateDirectoryRequest, RenameDirectoryRequest, DeleteDirectoryRequest
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
-from utils.constants import BASE_STORAGE_DIRECTORY, QUOTA_COUNT_IMAGES_BY_COMPANY, QUOTA_STORAGE_SIZE
+from utils.constants import BASE_STORAGE_DIRECTORY, QUOTA_COUNT_IMAGES_BY_COMPANY, QUOTA_STORAGE_SIZE, QUOTA_IMAGE_SIZE
 
 s3_directory_router = APIRouter()
 
@@ -82,6 +82,7 @@ async def get_storage_info_company_by_id(company_id: UUID,
         storage_objects = await s3client.get_objects_by_dir_name(dir_name=f'company_images/company_{company_id}/')
         return GetStorageLimitsInCompanyResponse(quota_count_images=QUOTA_COUNT_IMAGES_BY_COMPANY,
                                                  quota_storage_size=QUOTA_STORAGE_SIZE,
+                                                 quota_image_size=QUOTA_IMAGE_SIZE,
                                                  used_count=len(images),
                                                  used_size=sum(list(storage_objects.values())))
     except DBAPIError as e:
