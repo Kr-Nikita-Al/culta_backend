@@ -7,7 +7,6 @@ from sqlalchemy.orm import relationship
 
 from db.base_model import Base
 from utils.constants import EMPTY_UUID
-from db.item_model import ItemDB
 
 ###########################
 # БЛОК ОПИСАНИЯ МОДЕЛИ БД #

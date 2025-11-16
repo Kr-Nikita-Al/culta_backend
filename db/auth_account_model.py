@@ -7,8 +7,6 @@ from db.base_model import Base
 from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy import Enum as SQLEnum
 
-from utils.constants import EMPTY_UUID
-
 
 class AuthProvider(PyEnum):
     GOOGLE = "google"

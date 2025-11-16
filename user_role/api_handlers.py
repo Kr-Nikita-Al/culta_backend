@@ -14,6 +14,7 @@ from user_role.actions import __grant_user_role, __get_user_roles, __revoke_user
     __get_user_roles_by_company_id, __get_user_role_model
 from user_role.interface_request import GrantUserRoleRequest, RevokeUserRoleRequest
 from user_role.interface_response import GrantUserRoleResponse, GetUserRolesResponse, RevokeUserRoleResponse
+from user_role.model_user_roles import UserRoleModel
 from utils.constants import PortalRole
 
 user_role_router = APIRouter()
@@ -41,6 +42,7 @@ async def get_user_roles_in_company(company_id: UUID,
 #                              current_user: UserDB = Depends(__get_user_from_token)) -> List:
 #     return await __get_user_roles_by_company_id(current_user.user_id, company_id, db)
 
+
 @user_role_router.post('/grant_super_admin_privilege', response_model=GrantUserRoleResponse)
 async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
                                       cur_user: UserDB = Depends(__get_user_from_token)) -> GrantUserRoleResponse:
@@ -66,43 +68,75 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
         raise HTTPException(status_code=503, detail='Database error')
 
 
-@user_role_router.post('/grant_admin_privilege', response_model=GrantUserRoleResponse)
-async def grant_admin_privilege(promo_user_id: UUID,
+async def check_granting_or_revoking_user_roles(user_roles: UserRoleModel, promo_or_demo_role: PortalRole,
+                                                is_grant: bool = True):
+    """
+    Метод проверки ролей пользователя, который выдает/отзывает роль
+    :param is_grant: выдача прав
+    :param user_roles: роли пользователя
+    :param promo_or_demo_role: делегируемая роль
+    :return: bool
+    """
+    # Выдать/отозвать роль владельца может только супер админ
+    if promo_or_demo_role == PortalRole.PORTAL_ROLE_OWNER and user_roles.is_super_admin:
+        return True
+    # Выдать/отозвать роль администратора может супер админ, владелец.
+    # Другой администратор заведения может только выдать роль
+    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_ADMIN and (user_roles.is_super_admin or
+                                                                 user_roles.is_admin and is_grant or
+                                                                 user_roles.is_owner):
+        return True
+    # Выдать/отозвать роль модератора может владелец или администратор заведения
+    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_MODERATOR and (user_roles.is_admin or user_roles.is_owner):
+        return True
+    # Выдать/отозвать роль официанта может владелец или администратор заведения
+    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_WAITER and (user_roles.is_admin or user_roles.is_owner):
+        return True
+    return False
+
+
+@user_role_router.post('/grant_staff_privilege', response_model=GrantUserRoleResponse)
+async def grant_staff_privilege(promo_user_id: UUID,
                                 company_id: UUID,
+                                role: PortalRole,
                                 db: AsyncSession = Depends(get_db),
                                 cur_user: UserDB = Depends(__get_user_from_token)) -> GrantUserRoleResponse:
     """
-    Получить права администратора может клиент от авторизованного пользователя с
-    ролью администратора в этой компании или супер администратора
+    Метод получения прав в рамках компании
     :param promo_user_id: id пользователя, которому предоставляется роль
-    :param company_id: id компании, в рамках которой предоставляется роль администратора
+    :param company_id: id компании, в рамках которой предоставляется роль
+    :param role: выдаваемая роль в компании
     :param db: сессия
     :param cur_user: авторизованный пользователь
     :return: id клиента, выданному права администратора
     """
-    print(promo_user_id, company_id)
+    # Проверка на корректность заданной роли
+    if role not in [role.value for role in PortalRole if role not in [PortalRole.PORTAL_ROLE_SUPER_ADMIN, PortalRole.PORTAL_ROLE_USER]]:
+        raise HTTPException(status_code=422, detail='Incorrect data')
     # Проверка на возможность выделения прав авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)
-    if not cur_user_role_model.is_super_admin and not cur_user_role_model.is_admin:
+    is_permitted = await check_granting_or_revoking_user_roles(cur_user_role_model, role)
+    if not is_permitted:
         raise HTTPException(status_code=403, detail='Forbidden')
     if cur_user.user_id == promo_user_id:
         raise HTTPException(status_code=400, detail='Can not update privileges for itself')
     # Проверка на существование компании
     company_obj = await company.actions.__get_company_by_id(company_id, db)
     if company_obj is None:
-        raise HTTPException(status_code=404, detail='Company with id {0} not found'.format(company_id))
-    # Проверка на существование пользователя с ролью админа
+        raise HTTPException(status_code=404, detail=f'Company with id {company_id} not found')
+    # Проверка на существование пользователя с ролью
     promo_user = await __get_user_by_id(user_id=promo_user_id, session=db)
     if promo_user is None:
-        raise HTTPException(status_code=404, detail='User with id {0} not found'.format(promo_user_id))
+        raise HTTPException(status_code=404, detail=f'User with id {promo_user_id} not found')
     promo_user_role_model = await __get_user_role_model(user_id=promo_user_id, session=db,
                                                         company_id=company_id)
-    if promo_user_role_model.is_admin:
+    if promo_user_role_model.check_existing_role(role):
         raise HTTPException(status_code=409,
-                            detail='User with id {0} is already admin on this company'.format(promo_user_id))
-    promo_user_role_params = GrantUserRoleRequest(user_id=promo_user_id, company_id=company_id,
-                                                  role=PortalRole.PORTAL_ROLE_ADMIN,
+                            detail=f'User with id {promo_user_id} is already {role} on this company')
+    promo_user_role_params = GrantUserRoleRequest(user_id=promo_user_id,
+                                                  company_id=company_id,
+                                                  role=role,
                                                   creator_id=cur_user.user_id)
     try:
         return await __grant_user_role(promo_user_role_params, db)
@@ -112,143 +146,53 @@ async def grant_admin_privilege(promo_user_id: UUID,
         raise HTTPException(status_code=422, detail='Incorrect data')
 
 
-@user_role_router.delete('/revoke_admin_privilege', response_model=RevokeUserRoleResponse)
-async def revoke_admin_privilege(demo_user_id: UUID,
+@user_role_router.delete('/revoke_staff_privilege', response_model=RevokeUserRoleResponse)
+async def revoke_staff_privilege(demo_user_id: UUID,
                                  company_id: UUID,
+                                 role: PortalRole,
                                  db: AsyncSession = Depends(get_db),
                                  cur_user: UserDB = Depends(__get_user_from_token)) -> RevokeUserRoleResponse:
     """
-    Удалить права администратора может клиент от авторизованного пользователя с
-    ролью супер администратора
+    Метод отзыва прав в рамках компании
     :param demo_user_id: id пользователя, которому предоставляется роль
-    :param company_id: id компании, в рамках которой предоставляется роль администратора
+    :param company_id: id компании, в рамках которой предоставляется роль
+    :param role: выдаваемая роль в компании
     :param db: сессия
     :param cur_user: авторизованный пользователь
     :return: id клиента, выданному права администратора
     """
+    # Проверка на корректность заданной роли
+    if role not in [role.value for role in PortalRole if role not in [PortalRole.PORTAL_ROLE_SUPER_ADMIN, PortalRole.PORTAL_ROLE_USER]]:
+        raise HTTPException(status_code=422, detail='Incorrect data')
     # Проверка на возможность удаление авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)
-    if not cur_user_role_model.is_super_admin:
+    is_permitted = await check_granting_or_revoking_user_roles(cur_user_role_model, role, False)
+    if not is_permitted:
         raise HTTPException(status_code=403, detail='Forbidden')
     if cur_user.user_id == demo_user_id:
         raise HTTPException(status_code=400, detail='Can not update privileges for itself')
     # Проверка на существование компании
     company_obj = await company.actions.__get_company_by_id(company_id, db)
     if company_obj is None:
-        raise HTTPException(status_code=404, detail='Company with id {0} not found'.format(company_id))
-    # Проверка на существование пользователя с ролью админа
+        raise HTTPException(status_code=404, detail=f'Company with id {company_id} not found')
+    # Проверка на существование пользователя с ролью
     demo_user = await __get_user_by_id(user_id=demo_user_id, session=db)
     if demo_user is None:
-        raise HTTPException(status_code=404, detail='User with id {0} not found'.format(demo_user_id))
+        raise HTTPException(status_code=404, detail=f'User with id {demo_user_id} not found')
     demo_user_role_model = await __get_user_role_model(user_id=demo_user_id, session=db,
                                                        company_id=company_id)
-    if not demo_user_role_model.is_admin:
-        raise HTTPException(status_code=409, detail='User with id {0} has no admin privileges'.format(demo_user_id))
+    if not demo_user_role_model.check_existing_role(role):
+        raise HTTPException(status_code=409, detail=f'User with id {demo_user_id} has no {role} privileges')
     demo_user_role_params = RevokeUserRoleRequest(user_id=demo_user_id,
                                                   company_id=company_id,
-                                                  role=PortalRole.PORTAL_ROLE_ADMIN)
+                                                  role=role)
     try:
         revoked_user_id = await __revoke_user_role(demo_user_role_params, db)
         if revoked_user_id is None:
             raise HTTPException(status_code=404,
-                                detail='User with id {0} with admin role in company with id {1} was deleted'.format(
-                                    demo_user_id, company_id))
-        return RevokeUserRoleResponse(revoked_user_id=revoked_user_id)
-    except IntegrityError as e:
-        raise HTTPException(status_code=503, detail='Database error')
-    except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
-
-
-@user_role_router.post('/grant_moderator_privilege', response_model=GrantUserRoleResponse)
-async def grant_moderator_privilege(promo_user_id: UUID,
-                                    company_id: UUID,
-                                    db: AsyncSession = Depends(get_db),
-                                    cur_user: UserDB = Depends(__get_user_from_token)) -> GrantUserRoleResponse:
-    """
-    Получить права модератора может клиент от авторизованного пользователя с
-    ролью администратора в этой компании
-    :param promo_user_id: id пользователя, которому предоставляется роль
-    :param company_id: id компании, в рамках которой предоставляется роль администратора
-    :param db: сессия
-    :param cur_user: авторизованный пользователь
-    :return: id клиента, выданному права администратора
-    """
-    # Проверка на возможность выделения прав авторизованным пользователем
-    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
-                                                      company_id=company_id)
-    if not cur_user_role_model.is_admin:
-        raise HTTPException(status_code=403, detail='Forbidden')
-    if cur_user.user_id == promo_user_id:
-        raise HTTPException(status_code=400, detail='Can not update privileges for itself')
-    # Проверка на существование компании
-    company_obj = await company.actions.__get_company_by_id(company_id, db)
-    if company_obj is None:
-        raise HTTPException(status_code=404, detail='Company with id {0} not found'.format(company_id))
-    # Проверка на существование пользователя с ролью модератора
-    promo_user = await __get_user_by_id(user_id=promo_user_id, session=db)
-    if promo_user is None:
-        raise HTTPException(status_code=404, detail='User with id {0} not found'.format(promo_user_id))
-    promo_user_role_model = await __get_user_role_model(user_id=promo_user_id, session=db,
-                                                        company_id=company_id)
-    if promo_user_role_model.is_moderator:
-        raise HTTPException(status_code=409,
-                            detail='User with id {0} is already moderator on this company'.format(promo_user_id))
-    promo_user_role_params = GrantUserRoleRequest(user_id=promo_user_id,
-                                                  company_id=company_id,
-                                                  role=PortalRole.PORTAL_ROLE_MODERATOR,
-                                                  creator_id=cur_user.user_id)
-    try:
-        return await __grant_user_role(promo_user_role_params, db)
-    except IntegrityError as e:
-        raise HTTPException(status_code=503, detail='Database error')
-    except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
-
-
-@user_role_router.delete('/revoke_moderator_privilege', response_model=RevokeUserRoleResponse)
-async def revoke_moderator_privilege(demo_user_id: UUID,
-                                     company_id: UUID,
-                                     db: AsyncSession = Depends(get_db),
-                                     cur_user: UserDB = Depends(__get_user_from_token)) -> RevokeUserRoleResponse:
-    """
-    Удалить права администратора может клиент от авторизованного пользователя с
-    ролью супер администратора
-    :param demo_user_id: id пользователя, которому предоставляется роль
-    :param company_id: id компании, в рамках которой предоставляется роль администратора
-    :param db: сессия
-    :param cur_user: авторизованный пользователь
-    :return: id клиента, выданному права администратора
-    """
-    # Проверка на возможность удаление авторизованным пользователем
-    cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
-                                                      company_id=company_id)
-    if not cur_user_role_model.is_admin:
-        raise HTTPException(status_code=403, detail='Forbidden')
-    if cur_user.user_id == demo_user_id:
-        raise HTTPException(status_code=400, detail='Can not update privileges for itself')
-    # Проверка на существование компании
-    company_obj = await company.actions.__get_company_by_id(company_id, db)
-    if company_obj is None:
-        raise HTTPException(status_code=404, detail='Company with id {0} not found'.format(company_id))
-    # Проверка на существование пользователя с ролью админа
-    demo_user = await __get_user_by_id(user_id=demo_user_id, session=db)
-    if demo_user is None:
-        raise HTTPException(status_code=404, detail='User with id {0} not found'.format(demo_user_id))
-    demo_user_role_model = await __get_user_role_model(user_id=demo_user_id, session=db,
-                                                       company_id=company_id)
-    if not demo_user_role_model.is_moderator:
-        raise HTTPException(status_code=409, detail='User with id {0} has no moderator privileges'.format(demo_user_id))
-    demo_user_role_params = RevokeUserRoleRequest(user_id=demo_user_id,
-                                                  company_id=company_id,
-                                                  role=PortalRole.PORTAL_ROLE_MODERATOR)
-    try:
-        revoked_user_id = await __revoke_user_role(demo_user_role_params, db)
-        if revoked_user_id is None:
-            raise HTTPException(status_code=404,
-                                detail='User with id {0} with moderator role in company with id {1} was deleted'.format(
-                                    demo_user_id, company_id))
+                                detail=f'User with id {demo_user_id} with {role} in company with id {company_id} was '
+                                       f'deleted')
         return RevokeUserRoleResponse(revoked_user_id=revoked_user_id)
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
