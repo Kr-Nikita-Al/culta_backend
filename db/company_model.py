@@ -1,7 +1,7 @@
 import uuid
 import datetime
 
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, Time, ForeignKey
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, Time, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -24,9 +24,6 @@ class CompanyDB(Base):
     address = Column(String(50), nullable=False)
     phone = Column(String(12), nullable=False)
     email = Column(String(35), nullable=False)
-    age_limit = Column(Boolean, default=True)
-    work_state = Column(Boolean, default=True)
-    is_active = Column(Boolean, default=True)
     order_number = Column(Integer, default=-1)
 
     # Connection fields
@@ -46,3 +43,11 @@ class CompanyDB(Base):
     time_updated = Column(DateTime(timezone=True), default=datetime.datetime.now(), onupdate=datetime.datetime.now())
     start_time = Column(Time(), default=datetime.time(9, 0, 0))
     over_time = Column(Time(), default=datetime.time(18, 0, 0))
+
+    # Settings
+    work_state = Column(Boolean, default=True)
+    age_limit = Column(Boolean, default=True)
+    is_active = Column(Boolean, default=True)
+    is_can_client_create_order = Column(Boolean, default=False)
+    bonus_payment_perc = Column(Float, default=0)
+    bonus_accrual_perc = Column(Float, default=0)

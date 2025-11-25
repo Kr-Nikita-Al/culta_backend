@@ -35,7 +35,6 @@ class OrderDB(Base):
     user_id = Column(UUID(as_uuid=True), nullable=False)
     staff_id = Column(UUID(as_uuid=True), nullable=False)
 
-
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     updater_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

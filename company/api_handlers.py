@@ -37,8 +37,7 @@ async def create_company(body: CreateCompanyRequest,
                                         dir_name="company_{0}/".format(str(company.company_id)))
         return company
     except DBAPIError as e:
-        raise HTTPException(status_code=422,
-                            detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect data')
 
 
 @company_router.delete("/delete", response_model=DeleteCompanyResponse)
@@ -88,7 +87,7 @@ async def update_company_by_id(company_id: UUID,
                                cur_user: UserDB = Depends(__get_user_from_token)) -> UpdateCompanyResponse:
     # Проверка прав на обновление данных
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=company_id)
-    if not cur_user_role_model.is_admin and not cur_user_role_model.is_super_admin:
+    if not cur_user_role_model.is_admin and not cur_user_role_model.is_owner:
         raise HTTPException(status_code=403, detail='Forbidden')
     # Проверка на существование обновляемой компании
     upd_company = await __get_company_by_id(company_id=company_id, session=db)

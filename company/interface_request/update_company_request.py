@@ -2,7 +2,7 @@ from datetime import time
 from typing import Optional
 
 from fastapi import HTTPException
-from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool
+from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool, confloat
 
 from utils import LETTER_MATCH_PATTERN_PHONE
 
@@ -19,6 +19,9 @@ class UpdateCompanyRequest(BaseModel):
     image_icon_id: Optional[constr()]
     age_limit: Optional[StrictBool]
     work_state: Optional[StrictBool]
+    is_can_client_create_order: Optional[StrictBool]
+    bonus_payment_perc: Optional[confloat()]
+    bonus_accrual_perc: Optional[confloat()]
     start_time: Optional[time]
     over_time: Optional[time]
 

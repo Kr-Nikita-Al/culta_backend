@@ -25,8 +25,6 @@ class ImageDal:
         else:
             raise HTTPException(status_code=404,
                                 detail='Company with id {0} was not exit or deleted before'.format(company_id))
-        if kwargs["width"] <= 0 or kwargs["height"] <= 0:
-            raise HTTPException(status_code=422, detail='Incorrect width or height')
         new_image = ImageDB(
             image_id=kwargs["image_id"],
             company_id=company_id_for_adding,

@@ -26,6 +26,9 @@ class GetCompanyResponse(BaseModelResponse):
     image_icon_id: UUID
     age_limit: bool
     work_state: bool
+    is_can_client_create_order: bool
+    bonus_payment_perc: float
+    bonus_accrual_perc: float
     creator_id: UUID
     updater_id: UUID
     time_created: datetime

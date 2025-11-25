@@ -1,6 +1,9 @@
+from sys import prefix
+
 import uvicorn
 from fastapi import FastAPI, APIRouter
 
+from order.api_handlers import order_router
 from settings import ENV
 from s3_directory import s3_directory_router
 from settings import APP_PORT
@@ -58,6 +61,7 @@ main_api_router.include_router(item_router, prefix="/item_navigation", tags=["it
 main_api_router.include_router(container_router, prefix="/container_navigation", tags=["container_navigation"])
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
 main_api_router.include_router(login_router, prefix="/login", tags=["login"])
+main_api_router.include_router(order_router, prefix="/order", tags=["order_router"])
 
 # Добавляем роутер в приложение
 app.include_router(main_api_router)

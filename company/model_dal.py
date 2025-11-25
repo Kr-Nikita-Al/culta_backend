@@ -12,20 +12,17 @@ class CompanyDal:
     def __init__(self, db_session: AsyncSession):
         self.db_session = db_session
 
-    async def create_company(self, company_name: str, address: str, phone: str, email: str,
-                             order_number: int, age_limit: bool, work_state: bool, start_time: time,
-                             over_time: time, creator_user_id: UUID
-                             ) -> CompanyDB:
+    async def create_company(self, kwargs, creator_user_id: UUID) -> CompanyDB:
         new_company = CompanyDB(
-            company_name=company_name,
-            address=address,
-            phone=phone,
-            email=email,
-            order_number=order_number,
-            age_limit=age_limit,
-            work_state=work_state,
-            start_time=start_time,
-            over_time=over_time,
+            company_name=kwargs["company_name"],
+            address=kwargs["address"],
+            phone=kwargs["phone"],
+            email=kwargs["email"],
+            order_number=kwargs["order_number"],
+            age_limit=kwargs["age_limit"],
+            work_state=kwargs["work_state"],
+            start_time=kwargs["start_time"],
+            over_time=kwargs["over_time"],
             creator_id=creator_user_id
         )
         self.db_session.add(new_company)

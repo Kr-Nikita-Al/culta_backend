@@ -12,12 +12,15 @@ class CreateCompanyResponse(BaseModelResponse):
     address: str
     phone: str
     email: EmailStr
-    is_active: bool
     order_number: int
     basic_screen_id: UUID
     group_id: int
     image_picture_id: UUID
     image_icon_id: UUID
+    bonus_accrual_perc: float
+    bonus_payment_perc: float
+    is_can_client_create_order: bool
+    is_active: bool
     age_limit: bool
     work_state: bool
     creator_id: UUID

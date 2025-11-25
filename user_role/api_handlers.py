@@ -69,7 +69,7 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
 
 
 async def check_granting_or_revoking_user_roles(user_roles: UserRoleModel, promo_or_demo_role: PortalRole,
-                                                is_grant: bool = True):
+                                                is_grant: bool = True) -> bool:
     """
     Метод проверки ролей пользователя, который выдает/отзывает роль
     :param is_grant: выдача прав
