@@ -32,3 +32,15 @@ class UpdateCompanyRequest(BaseModel):
                 status_code=422, detail="Incorrect phone"
             )
         return value
+
+    @validator("bonus_payment_perc")
+    def validate_bonus_payment_perc(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect bonus_payment_perc")
+        return value
+
+    @validator("bonus_accrual_perc")
+    def validate_bonus_accrual_perc(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect bonus_accrual_perc")
+        return value

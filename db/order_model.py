@@ -19,6 +19,7 @@ class STATUS_TYPE(PyEnum):
     CREATED = "created"
     PROCESSING = "processing"
     COMPLETED = "completed"
+    CANCELED = "canceled"
 
 
 class OrderDB(Base):

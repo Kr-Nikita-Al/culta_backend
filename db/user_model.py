@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, Boolean, DateTime, func
+from sqlalchemy import Column, String, Boolean, DateTime, func, Float
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -26,6 +26,7 @@ class UserDB(Base):
     email = Column(String, nullable=False, unique=True)
     is_active = Column(Boolean, default=True)
     hashed_password = Column(String, nullable=False)
+    bonus_balance = Column(Float, default=0)
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

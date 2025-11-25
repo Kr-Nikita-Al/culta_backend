@@ -8,16 +8,17 @@ from company.actions import __get_company_by_id
 from db import UserDB
 from s3_directory.storage.s3client import S3Client
 from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user, \
-    __check_user_permissions_on_delete, __check_user_permissions_on_update
+    __check_user_permissions_on_delete, __check_user_permissions_on_update, \
+    __check_user_permissions_on_update_bonus_balance
 from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
-from user.interface_request import CreateUserRequest, UpdateUserRequest
+from user.interface_request import CreateUserRequest, UpdateUserRequest, UpdateBonusBalanceRequest
 from user.interface_response import CreateUserResponse, DeleteUserResponse, GetUserResponse, UpdateUserResponse
 
 from db.session import get_db
 
 from fastapi import APIRouter
 
-from user_role.actions import __grant_user_role
+from user_role.actions import __grant_user_role, __get_user_role_model
 from user_role.interface_request import GrantUserRoleRequest
 from utils.constants import BASE_STORAGE_DIRECTORY, PortalRole
 
@@ -50,7 +51,7 @@ async def delete_user(user_id: UUID,
         raise HTTPException(status_code=404,
                             detail='User with id {0} is not found'.format(user_id))
     # Проверка прав на удаление
-    if not __check_user_permissions_on_delete(
+    if not await __check_user_permissions_on_delete(
             target_user=user_for_deletion, current_user=current_user, db=db
     ):
         raise HTTPException(status_code=403, detail="Forbidden.")
@@ -84,6 +85,37 @@ async def check_user_by_email(email: str, db: AsyncSession = Depends(get_db)):
     return {'Success': True}
 
 
+@user_router.patch('/update_bonus_balance_by_id', response_model=UpdateUserResponse)
+async def update_user_bonus_balance(user_id: UUID,
+                                    body: UpdateBonusBalanceRequest,
+                                    db: AsyncSession = Depends(get_db),
+                                    current_user: UserDB = Depends(__get_user_from_token)) -> UpdateUserResponse:
+    # Проверка на существование пользователя
+    user_for_update = await __get_user_by_id(user_id=user_id, session=db)
+    if user_for_update is None:
+        raise HTTPException(status_code=404,
+                            detail='User with id {0} is not found'.format(user_id))
+    # Проверка прав на обновление
+    if not await __check_user_permissions_on_update_bonus_balance(target_user=user_for_update,
+                                                                  is_write_off=bool(body.is_write_off),
+                                                                  company_id=body.company_id,
+                                                                  current_user=current_user, db=db):
+        raise HTTPException(status_code=403, detail='Forbidden')
+    update_user_params = {'bonus_balance': user_for_update.bonus_balance}
+    if body.is_write_off:
+        if (update_user_params['bonus_balance'] - body.amount) < 0:
+            raise HTTPException(status_code=422, detail='Incorrect data')
+        update_user_params['bonus_balance'] -= body.amount
+    else:
+        update_user_params['bonus_balance'] += body.amount
+    try:
+        updated_user_id = await __update_user(update_user_params=update_user_params,
+                                              user_id=user_id, session=db)
+    except IntegrityError as e:
+        raise HTTPException(status_code=503, detail='Database error')
+    return UpdateUserResponse(updated_user_id=updated_user_id)
+
+
 @user_router.patch('/update_by_id', response_model=UpdateUserResponse)
 async def update_user(user_id: UUID,
                       body: UpdateUserRequest,
@@ -95,11 +127,13 @@ async def update_user(user_id: UUID,
         raise HTTPException(status_code=404,
                             detail='User with id {0} is not found'.format(user_id))
     # Проверка прав на обновление
-    if not __check_user_permissions_on_update(
-            target_user=user_for_update, current_user=current_user, db=db):
+    if not await __check_user_permissions_on_update(target_user=user_for_update, current_user=current_user, db=db):
         raise HTTPException(status_code=403, detail='Forbidden')
     # Попытка обновить данные пользователя
     update_user_params = body.dict(exclude_none=True)  # exclude_none, чтобы удалить незаполненные поля
+    # Пользователь не может самостоятельно обновлять свой баланс
+    if 'bonus_balance' in update_user_params:
+        raise HTTPException(status_code=403, detail='Forbidden')
     if update_user_params == {}:
         raise HTTPException(status_code=422, detail='All fields are empty')
     try:

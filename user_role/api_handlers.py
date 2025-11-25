@@ -11,7 +11,7 @@ from db.session import get_db
 from settings import ACCESS_SUPER_ADMINS
 from user.actions import __get_user_from_token, __get_user_by_id
 from user_role.actions import __grant_user_role, __get_user_roles, __revoke_user_role, \
-    __get_user_roles_by_company_id, __get_user_role_model
+    __get_user_roles_by_company_id, __get_user_role_model, __check_permissions_granting_or_revoking_user_roles
 from user_role.interface_request import GrantUserRoleRequest, RevokeUserRoleRequest
 from user_role.interface_response import GrantUserRoleResponse, GetUserRolesResponse, RevokeUserRoleResponse
 from user_role.model_user_roles import UserRoleModel
@@ -68,33 +68,6 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
         raise HTTPException(status_code=503, detail='Database error')
 
 
-async def check_granting_or_revoking_user_roles(user_roles: UserRoleModel, promo_or_demo_role: PortalRole,
-                                                is_grant: bool = True) -> bool:
-    """
-    Метод проверки ролей пользователя, который выдает/отзывает роль
-    :param is_grant: выдача прав
-    :param user_roles: роли пользователя
-    :param promo_or_demo_role: делегируемая роль
-    :return: bool
-    """
-    # Выдать/отозвать роль владельца может только супер админ
-    if promo_or_demo_role == PortalRole.PORTAL_ROLE_OWNER and user_roles.is_super_admin:
-        return True
-    # Выдать/отозвать роль администратора может супер админ, владелец.
-    # Другой администратор заведения может только выдать роль
-    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_ADMIN and (user_roles.is_super_admin or
-                                                                 user_roles.is_admin and is_grant or
-                                                                 user_roles.is_owner):
-        return True
-    # Выдать/отозвать роль модератора может владелец или администратор заведения
-    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_MODERATOR and (user_roles.is_admin or user_roles.is_owner):
-        return True
-    # Выдать/отозвать роль официанта может владелец или администратор заведения
-    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_WAITER and (user_roles.is_admin or user_roles.is_owner):
-        return True
-    return False
-
-
 @user_role_router.post('/grant_staff_privilege', response_model=GrantUserRoleResponse)
 async def grant_staff_privilege(promo_user_id: UUID,
                                 company_id: UUID,
@@ -116,7 +89,7 @@ async def grant_staff_privilege(promo_user_id: UUID,
     # Проверка на возможность выделения прав авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)
-    is_permitted = await check_granting_or_revoking_user_roles(cur_user_role_model, role)
+    is_permitted = await __check_permissions_granting_or_revoking_user_roles(cur_user_role_model, role)
     if not is_permitted:
         raise HTTPException(status_code=403, detail='Forbidden')
     if cur_user.user_id == promo_user_id:
@@ -167,7 +140,7 @@ async def revoke_staff_privilege(demo_user_id: UUID,
     # Проверка на возможность удаление авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)
-    is_permitted = await check_granting_or_revoking_user_roles(cur_user_role_model, role, False)
+    is_permitted = await __check_permissions_granting_or_revoking_user_roles(cur_user_role_model, role, False)
     if not is_permitted:
         raise HTTPException(status_code=403, detail='Forbidden')
     if cur_user.user_id == demo_user_id:
