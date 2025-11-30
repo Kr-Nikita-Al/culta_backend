@@ -1,5 +1,4 @@
 from db.item_model import ItemDB
-from db.product_card_model import ProductCardDB
 from db.company_model import CompanyDB
 from db.container_model import ContainerDB
 from db.screen_model import ScreenDB
@@ -7,11 +6,9 @@ from db.image_model import ImageDB
 from db.user_model import UserDB
 from db.user_role_model import UserRoleDB
 from db.auth_account_model import AuthAccountDB, AuthProvider
+from db.product_card_model import ProductCardDB
 from db.order_model import OrderDB, STATUS_TYPE
-
-
-
-
+from db.order_product_association_model import OrderProductAssociationDB
 
 
 

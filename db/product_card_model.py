@@ -1,9 +1,10 @@
 from datetime import datetime
 import uuid
+from typing import List
 
 from sqlalchemy import Column, ForeignKey, Integer, DateTime, String, Boolean
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, Mapped
 
 from db.base_model import Base
 from utils.constants import EMPTY_UUID
@@ -57,8 +58,17 @@ class ProductCardDB(Base):
     image_product_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     image_icon_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
 
-    # Navigation fields
+    # Relationships
     item = relationship("ItemDB", back_populates="product_card_info", lazy="joined")
+    orders = relationship(
+        "OrderDB",
+        secondary="order_product_association",
+        back_populates="products"
+    )
+    order_items = relationship(
+        "OrderProductAssociationDB",
+        back_populates="product_info"
+    )
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

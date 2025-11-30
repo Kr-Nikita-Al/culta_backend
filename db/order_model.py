@@ -1,10 +1,11 @@
 import uuid
 import datetime
 
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String
+from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, Float
 from sqlalchemy.dialects.postgresql import UUID
 from enum import Enum as PyEnum
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.orm import Mapped, relationship
 
 from db.base_model import Base
 from utils.constants import EMPTY_UUID
@@ -20,10 +21,11 @@ class STATUS_TYPE(PyEnum):
     PROCESSING = "processing"
     COMPLETED = "completed"
     CANCELED = "canceled"
+    CLOSED = "closed"
 
 
 class OrderDB(Base):
-    __tablename__ = 'order'
+    __tablename__ = 'orders'
     order_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     # Properties
@@ -32,9 +34,22 @@ class OrderDB(Base):
     status = Column(SQLEnum(STATUS_TYPE), default=STATUS_TYPE.CREATED, nullable=False)
 
     # Connection fields
-    company_id = Column(ForeignKey('company.company_id'), primary_key=True, nullable=False)
+    company_id = Column(ForeignKey('company.company_id'), nullable=False)
     user_id = Column(UUID(as_uuid=True), nullable=False)
     staff_id = Column(UUID(as_uuid=True), nullable=False)
+    price = Column(Float, default=0)
+    bonus_transaction = Column(Float, default=0)
+
+    # Relationships
+    products = relationship(
+        "ProductCardDB",
+        secondary="order_product_association",
+        back_populates="orders"
+    )
+    order_items = relationship(
+        "OrderProductAssociationDB",
+        back_populates="order_info"
+    )
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

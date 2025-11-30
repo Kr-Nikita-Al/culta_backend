@@ -6,5 +6,6 @@ from user.actions.get_current_user_from_token_action import __get_user_from_toke
 from user.actions.check_user_permissions_on_delete import __check_user_permissions_on_delete
 from user.actions.check_user_permissions_on_update import __check_user_permissions_on_update
 from user.actions.check_user_permissions_on_update_bonus_balance import __check_user_permissions_on_update_bonus_balance
+from user.actions.generate_qr_code_action import __generate_qr_base64
 
 

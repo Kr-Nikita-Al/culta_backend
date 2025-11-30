@@ -15,6 +15,9 @@ ACCESS_SUPER_ADMINS: list[str] = env.list("ACCESS_SUPER_ADMINS")
 SECRET_KEY: str = env.str("SECRET_KEY")
 ALGORITHM: str = env.str("ALGORITHM")
 ACCESS_TOKEN_EXPIRE_MINUTES: int = env.int("ACCESS_TOKEN_EXPIRE_MINUTES")
+# Qr hashing settings
+QR_SECRET_KEY: str = env.str("QR_SECRET_KEY")
+QR_ALGORITHM: str = env.str("QR_ALGORITHM")
 # S3 storage
 AWS_BUCKET_NAME: int = env.str("AWS_BUCKET_NAME")
 AWS_ACCESS_KEY_ID: int = env.str("AWS_ACCESS_KEY_ID")

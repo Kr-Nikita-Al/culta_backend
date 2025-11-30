@@ -1,10 +1,9 @@
-from sys import prefix
+from settings import ENV
 
 import uvicorn
 from fastapi import FastAPI, APIRouter
 
-from order.api_handlers import order_router
-from settings import ENV
+from order import order_router
 from s3_directory import s3_directory_router
 from settings import APP_PORT
 from auth import login_router

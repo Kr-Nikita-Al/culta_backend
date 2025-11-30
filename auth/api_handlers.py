@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import RedirectResponse
 
 from auth.actions_by_yandex import __get_or_create_auth_user
-from auth.model_dal import AuthDal, create_access_token
+from auth.model_dal import create_access_token
 from db.auth_account_model import AuthProvider
 from settings import YANDEX_CLIENT_ID, YANDEX_REDIRECT_URI, YANDEX_CLIENT_SECRET, ACCESS_TOKEN_EXPIRE_MINUTES
 from auth.actions_by_login.authenticate_user_action import authenticate_user_by_login

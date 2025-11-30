@@ -26,7 +26,8 @@ class UserDB(Base):
     email = Column(String, nullable=False, unique=True)
     is_active = Column(Boolean, default=True)
     hashed_password = Column(String, nullable=False)
-    bonus_balance = Column(Float, default=0)
+    bonus_balance = Column(Float, default=500)
+    qr_code = Column(String, default='')
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

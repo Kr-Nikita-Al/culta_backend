@@ -35,5 +35,3 @@ class ScreenDB(Base):
     updater_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
     time_created = Column(DateTime(timezone=True), default=datetime.now())
     time_updated = Column(DateTime(timezone=True), default=datetime.now(), onupdate=datetime.now())
-
-

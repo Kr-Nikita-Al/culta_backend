@@ -12,6 +12,7 @@ class UpdateUserRequest(BaseModel):
     phone: Optional[constr(min_length=1)]
     email: Optional[EmailStr]
     password: Optional[constr(min_length=1)]
+    qr_code: Optional[constr()]
 
     @validator("phone")
     def validate_phone(cls, value):

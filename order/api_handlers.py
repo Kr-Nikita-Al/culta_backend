@@ -9,19 +9,16 @@ from db.session import get_db
 from fastapi import APIRouter
 from sqlalchemy.exc import IntegrityError, DBAPIError
 
-from order.actions import __create_order
+from order.actions import __create_order, __check_permissions_create_order
 from order.interface_request import CreateOrderRequest, UpdateOrderRequest
 from order.interface_response import CreateOrderResponse, UpdateOrderResponse
+from order.order_product_association.actions import __create_order_product_action
+from order.order_product_association.interface_request import CreateOrderProductRequest
 from user.actions import __get_user_from_token, __get_user_by_id
 from user_role.actions import __get_user_role_model
 from user_role.model_user_roles import UserRoleModel
 
 order_router = APIRouter()
-
-
-async def check_role_working_with_order(user_role_model: UserRoleModel) -> bool:
-    # Работать с заказами в заведении может владелец, администратор или официант
-    return user_role_model.is_owner or user_role_model.is_admin or user_role_model.is_waiter
 
 
 @order_router.post("/create", response_model=CreateOrderResponse)
@@ -30,7 +27,7 @@ async def create_order(body: CreateOrderRequest,
                        cur_user: UserDB = Depends(__get_user_from_token)) -> CreateOrderResponse:
     # Проверка прав на создание
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=body.company_id)
-    if not await check_role_working_with_order(cur_user_role_model):
+    if not await __check_permissions_create_order(cur_user_role_model):
         raise HTTPException(status_code=403, detail='Forbidden')
     # Проверка на существование компании
     company_obj = await __get_company_by_id(body.company_id, db)
@@ -45,6 +42,13 @@ async def create_order(body: CreateOrderRequest,
         raise HTTPException(status_code=404, detail=f'Staff with id {cur_user.user_id} not found')
     try:
         order = await __create_order(body, cur_user.user_id, db)
+        if len(body.order_items) > 0:
+            for order_item in body.order_items:
+                await __create_order_product_action(
+                                CreateOrderProductRequest(order_id=order.order_id,
+                                                          product_card_id=order_item.product_card_id,
+                                                          quantity=order_item.quantity),
+                                db)
         return order
     except DBAPIError as e:
         raise HTTPException(status_code=422, detail='Incorrect data')
