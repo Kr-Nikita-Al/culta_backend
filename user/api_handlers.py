@@ -10,7 +10,7 @@ from db import UserDB
 from s3_directory.storage.s3client import S3Client
 from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user, \
     __check_user_permissions_on_delete, __check_user_permissions_on_update, \
-    __check_user_permissions_on_update_bonus_balance, __generate_qr_base64
+    __check_user_permissions_on_update_bonus_balance, __generate_qr_base64, __verify_qr_token
 from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
 from user.interface_request import CreateUserRequest, UpdateUserRequest, UpdateBonusBalanceRequest
 from user.interface_response import CreateUserResponse, DeleteUserResponse, GetUserResponse, UpdateUserResponse, \
@@ -20,7 +20,7 @@ from db.session import get_db
 
 from fastapi import APIRouter
 
-from user_role.actions import __grant_user_role
+from user_role.actions import __grant_user_role, __get_user_role_model
 from user_role.interface_request import GrantUserRoleRequest
 from utils.constants import BASE_STORAGE_DIRECTORY, PortalRole
 
@@ -83,40 +83,6 @@ async def get_user_by_id(user_id: UUID,
     if user_id != current_user.user_id:
         raise HTTPException(status_code=403, detail='Forbidden')
     return user
-
-
-@user_router.get('/get_user_qr_code_by_id', response_model=GetUserQrCodeResponse)
-async def get_user_qr_code_by_id(user_id: UUID,
-                                 db: AsyncSession = Depends(get_db),
-                                 current_user: UserDB = Depends(__get_user_from_token)) -> GetUserQrCodeResponse:
-    user = await __get_user_by_id(user_id, db)
-    if user is None:
-        raise HTTPException(status_code=404,
-                            detail='User with id {0} is not found or was deleted before'.format(user_id))
-    if user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail='Forbidden')
-    return GetUserQrCodeResponse(qr_code=user.qr_code)
-
-
-@user_router.patch('/update_qr_code_by_id', response_model=GetUserQrCodeResponse)
-async def update_qr_code_by_id(user_id: UUID,
-                               db: AsyncSession = Depends(get_db),
-                               current_user: UserDB = Depends(__get_user_from_token)) -> GetUserQrCodeResponse:
-    user = await __get_user_by_id(user_id, db)
-    if user is None:
-        raise HTTPException(status_code=404,
-                            detail='User with id {0} is not found or was deleted before'.format(user_id))
-    if user_id != current_user.user_id:
-        raise HTTPException(status_code=403, detail='Forbidden')
-    try:
-        # Создание qr кода
-        qr_code = await asyncio.to_thread(__generate_qr_base64, str(user_id))
-        _ = await __update_user(update_user_params={'qr_code': qr_code},
-                                user_id=user.user_id, session=db)
-        return GetUserQrCodeResponse(qr_code=user.qr_code)
-    except DBAPIError as e:
-        raise HTTPException(status_code=422,
-                            detail='Incorrect data')
 
 
 @user_router.get('/check_by_email', response_model=Dict)
@@ -193,3 +159,61 @@ async def update_user(user_id: UUID,
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
     return UpdateUserResponse(updated_user_id=updated_user_id)
+
+
+@user_router.get('/get_user_qr_code_by_id', response_model=GetUserQrCodeResponse)
+async def get_user_qr_code_by_id(user_id: UUID,
+                                 db: AsyncSession = Depends(get_db),
+                                 current_user: UserDB = Depends(__get_user_from_token)) -> GetUserQrCodeResponse:
+    user = await __get_user_by_id(user_id, db)
+    if user is None:
+        raise HTTPException(status_code=404,
+                            detail='User with id {0} is not found or was deleted before'.format(user_id))
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    return GetUserQrCodeResponse(qr_code=user.qr_code)
+
+
+@user_router.patch('/update_qr_code_by_id', response_model=GetUserQrCodeResponse)
+async def update_qr_code_by_id(user_id: UUID,
+                               db: AsyncSession = Depends(get_db),
+                               current_user: UserDB = Depends(__get_user_from_token)) -> GetUserQrCodeResponse:
+    user = await __get_user_by_id(user_id, db)
+    if user is None:
+        raise HTTPException(status_code=404,
+                            detail='User with id {0} is not found or was deleted before'.format(user_id))
+    if user_id != current_user.user_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    try:
+        # Создание qr кода
+        qr_code = await asyncio.to_thread(__generate_qr_base64, str(user_id))
+        _ = await __update_user(update_user_params={'qr_code': qr_code},
+                                user_id=user.user_id, session=db)
+        return GetUserQrCodeResponse(qr_code=user.qr_code)
+    except DBAPIError as e:
+        raise HTTPException(status_code=422,
+                            detail='Incorrect data')
+
+
+@user_router.post("/scan_qr_code")
+async def scan_qr_code(qr_token: str,
+                       company_id: UUID,
+                       db: AsyncSession = Depends(get_db),
+                       current_user: UserDB = Depends(__get_user_from_token)):
+    # Проверка прав
+    user_role_model = await __get_user_role_model(user_id=current_user.user_id, session=db,
+                                                  company_id=company_id)
+    if not(user_role_model.is_owner or user_role_model.is_admin or user_role_model.is_waiter):
+        raise HTTPException(status_code=403, detail='Forbidden')
+    try:
+        # Проверка qr_token и user_id
+        payload = await __verify_qr_token(qr_token)
+        user_id = payload.get('user_id')
+        if not user_id:
+            raise HTTPException(status_code=400, detail="Invalid QR code: no user_id found")
+        user = await __get_user_by_id(user_id, db)
+        return {"user_id": user.user_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing QR code: {str(e)}")

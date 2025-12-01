@@ -50,3 +50,19 @@ def __generate_qr_base64(user_id: str) -> str:
 
     img_str = base64.b64encode(buffer.getvalue()).decode()
     return f"data:image/png;base64,{img_str}"
+
+
+async def __verify_qr_token(qr_token: str) -> dict:
+    """Верифицирует JWT токен из QR-кода"""
+    try:
+        payload = jwt.decode(
+            qr_token,
+            QR_SECRET_KEY,
+            algorithms=[QR_ALGORITHM]
+        )
+        return payload
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired QR code"
+        )

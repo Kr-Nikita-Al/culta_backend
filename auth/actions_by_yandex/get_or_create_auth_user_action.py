@@ -1,3 +1,4 @@
+import asyncio
 from random import choice
 from string import ascii_lowercase, digits, ascii_uppercase
 from typing import Optional
@@ -9,11 +10,12 @@ from auth.actions_by_yandex.get_auth_account_by_user_id_action import __get_auth
 from auth.actions_by_yandex.create_auth_account_action import __create_auth_account
 from auth.interface_request import CreateAuthAccountRequest
 from db import UserDB, AuthProvider
-from user.actions import __get_user_by_email_for_auth, __create_user
+from s3_directory.storage import S3Client
+from user.actions import __get_user_by_email_for_auth, __create_user, __generate_qr_base64, __update_user
 from user.interface_request import CreateUserRequest
 from user_role.actions import __grant_user_role
 from user_role.interface_request import GrantUserRoleRequest
-from utils.constants import PortalRole
+from utils.constants import PortalRole, BASE_STORAGE_DIRECTORY
 
 
 async def __get_or_create_auth_user(
@@ -40,10 +42,20 @@ async def __get_or_create_auth_user(
         random_password = [choice(ascii_lowercase +digits if i != 5 else ascii_uppercase) for i in range(25)]
         user_body = CreateUserRequest(name=name, surname=surname, email=email,
                                       password=''.join(random_password), phone=phone)
+        # Создания пользователя в БД
         user = await __create_user(user_body=user_body, session=db)
+        # Выделения прав пользователя
         _ = await __grant_user_role(GrantUserRoleRequest(user_id=user.user_id,
                                                          role=PortalRole.PORTAL_ROLE_USER,
                                                          creator_id=user.user_id), db)
+        # Создания папки в s3 storage
+        s3client = S3Client()
+        await s3client.create_directory(dir_path=BASE_STORAGE_DIRECTORY.USER,
+                                        dir_name="user_{0}".format(str(user.user_id)))
+        # Создание qr кода
+        qr_code = await asyncio.to_thread(__generate_qr_base64, str(user.user_id))
+        _ = await __update_user(update_user_params={'qr_code': qr_code},
+                                user_id=user.user_id, session=db)
     # Проверяем, нет ли уже привязки этого провайдера
     existing_account = await __get_auth_account_by_user_id(user_id=user.user_id, provider=provider, session=db)
     if not existing_account:
