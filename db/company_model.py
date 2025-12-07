@@ -25,6 +25,8 @@ class CompanyDB(Base):
     phone = Column(String(12), nullable=False)
     email = Column(String(35), nullable=False)
     order_number = Column(Integer, default=-1)
+    city = Column(String(50), default="Москва")
+    region = Column(String(50), default="Москва и Московская обл.")
 
     # Connection fields
     basic_screen_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

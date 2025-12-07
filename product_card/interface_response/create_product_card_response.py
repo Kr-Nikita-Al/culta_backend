@@ -26,12 +26,9 @@ class CreateProductCardResponse(BaseModelResponse):
     is_hotness: bool
     is_active: bool
     count_number: int
-    price_field_1: int
-    price_field_2: int
-    cost_price_field_1: int
-    cost_price_field_2: int
-    cashback_field_1: int
-    cashback_field_2: int
+    price: float
+    cost_price: float
+    cashback_perc: float
     product_quantity: int
     calorie_content: int
     proteins: int

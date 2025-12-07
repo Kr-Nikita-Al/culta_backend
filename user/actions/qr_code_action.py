@@ -40,7 +40,6 @@ def __generate_qr_base64(user_id: str) -> str:
     )
     qr.add_data(qr_data)
     qr.make(fit=True)
-
     img = qr.make_image(fill_color="black", back_color="white")
 
     # Конвертируем в base64

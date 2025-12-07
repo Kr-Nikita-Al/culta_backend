@@ -13,6 +13,8 @@ class UpdateCompanyRequest(BaseModel):
     phone: Optional[constr()]
     email: Optional[EmailStr]
     order_number: Optional[conint()]
+    city: Optional[constr()]
+    region: Optional[constr()]
     basic_screen_id: Optional[constr()]
     company_group_id: Optional[conint()]
     image_picture_id: Optional[constr()]

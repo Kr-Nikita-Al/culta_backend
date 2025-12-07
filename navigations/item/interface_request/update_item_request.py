@@ -1,10 +1,7 @@
-from datetime import time
 from typing import Optional
 
 from fastapi import HTTPException
-from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool
-
-from utils import LETTER_MATCH_PATTERN_PHONE
+from pydantic import BaseModel, validator, constr, conint
 
 
 class UpdateItemRequest(BaseModel):
@@ -12,3 +9,14 @@ class UpdateItemRequest(BaseModel):
     item_column_order: Optional[conint()]
     item_row_order: Optional[conint()]
 
+    @validator("item_column_order")
+    def validate_item_column_order(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect item_column_order")
+        return value
+
+    @validator("item_row_order")
+    def validate_item_row_order(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect item_row_order")
+        return value

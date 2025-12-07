@@ -20,6 +20,8 @@ async def __create_company(company_body: CreateCompanyRequest, user_id: UUID, se
             phone=company_db.phone,
             email=company_db.email,
             order_number=company_db.order_number,
+            city=company_db.city,
+            region=company_db.region,
             basic_screen_id=company_db.basic_screen_id,
             group_id=company_db.group_id,
             image_picture_id=company_db.image_picture_id,

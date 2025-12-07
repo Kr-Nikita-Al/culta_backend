@@ -9,14 +9,15 @@ from db.session import get_db
 from fastapi import APIRouter
 from sqlalchemy.exc import IntegrityError, DBAPIError
 
-from order.actions import __create_order, __check_permissions_create_order
-from order.interface_request import CreateOrderRequest, UpdateOrderRequest
-from order.interface_response import CreateOrderResponse, UpdateOrderResponse
+from order.actions import __create_order, __check_permissions_create_order, __get_order_by_id
+from order.interface_request import CreateOrderRequest
+from order.interface_response import CreateOrderResponse, GetOrderResponse, \
+    GetClientOrderResponse, GetStaffOrderResponse
 from order.order_product_association.actions import __create_order_product_action
 from order.order_product_association.interface_request import CreateOrderProductRequest
 from user.actions import __get_user_from_token, __get_user_by_id
 from user_role.actions import __get_user_role_model
-from user_role.model_user_roles import UserRoleModel
+from utils.constants import EMPTY_UUID
 
 order_router = APIRouter()
 
@@ -42,7 +43,7 @@ async def create_order(body: CreateOrderRequest,
         raise HTTPException(status_code=404, detail=f'Staff with id {cur_user.user_id} not found')
     try:
         order = await __create_order(body, cur_user.user_id, db)
-        if len(body.order_items) > 0:
+        if body.order_items is not None and len(body.order_items) > 0:
             for order_item in body.order_items:
                 await __create_order_product_action(
                                 CreateOrderProductRequest(order_id=order.order_id,
@@ -54,22 +55,41 @@ async def create_order(body: CreateOrderRequest,
         raise HTTPException(status_code=422, detail='Incorrect data')
 
 
-# @order_router.get('/get_by_id', response_model=GetCompanyResponse)
-# async def get_company_by_id(company_id: UUID, db: AsyncSession = Depends(get_db)) -> GetCompanyResponse:
-#     company = await __get_company_by_id(company_id, db)
-#     if company is None:
-#         raise HTTPException(status_code=404,
-#                             detail='Company with id {0} is not found or was deleted before'.format(company_id))
-#     return company
+@order_router.get('/get_by_id', response_model=GetOrderResponse)
+async def get_order_by_id(order_id: UUID,
+                          db: AsyncSession = Depends(get_db),
+                          cur_user: UserDB = Depends(__get_user_from_token),
+                          company_id: UUID = EMPTY_UUID) -> GetOrderResponse:
+    is_staff: bool = company_id != EMPTY_UUID
+    if is_staff:
+        # Проверка прав на получение информации о заказе сотрудником
+        cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
+                                                          company_id=company_id)
+        if not (cur_user_role_model.is_admin or cur_user_role_model.is_owner or cur_user_role_model.is_waiter):
+            raise HTTPException(status_code=403, detail='Forbidden')
+    order = await __get_order_by_id(order_id, is_staff, db)
+    # Проверка прав на получение информации о заказе обычным юзером
+    if not is_staff and order.user_id != cur_user.user_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    if order is None:
+        raise HTTPException(status_code=404, detail='Order with id {0} is not found'.format(order_id))
+    return order
 
 
-# @company_router.get('/get_all', response_model=GetAllCompanyResponse)
-# async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompanyResponse:
-#     companies = await __get_all_companies(db)
-#     if companies is None:
+
+# @order_router.get('/get_all', response_model=GetAllOrderResponse)
+# async def get_all_companies(company_id: UUID,
+#                             db: AsyncSession = Depends(get_db),
+#                             cur_user: UserDB = Depends(__get_user_from_token)) -> GetAllOrderResponse:
+#     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
+#                                                       company_id=company_id)
+#     if not (cur_user_role_model.is_admin or cur_user_role_model.is_owner or cur_user_role_model.is_waiter):
+#         raise HTTPException(status_code=403, detail='Forbidden')
+#     orders = await __get_all_orders(company_id, db)
+#     if orders is None:
 #         raise HTTPException(status_code=404,
 #                             detail='Table Company is empty')
-#     return GetAllCompanyResponse(companies=companies)
+#     return GetAllOrderResponse(orders=orders)
 
 
 # @order_router.patch('/update_by_id', response_model=UpdateOrderResponse)

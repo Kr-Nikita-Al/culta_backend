@@ -14,7 +14,7 @@ from user.actions import __create_user, __delete_user, __get_user_by_id, __updat
 from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
 from user.interface_request import CreateUserRequest, UpdateUserRequest, UpdateBonusBalanceRequest
 from user.interface_response import CreateUserResponse, DeleteUserResponse, GetUserResponse, UpdateUserResponse, \
-    GetUserQrCodeResponse
+    GetUserQrCodeResponse, GetUserQrPayloadResponse
 
 from db.session import get_db
 
@@ -195,11 +195,11 @@ async def update_qr_code_by_id(user_id: UUID,
                             detail='Incorrect data')
 
 
-@user_router.post("/scan_qr_code")
+@user_router.post("/scan_qr_code", response_model=GetUserQrPayloadResponse)
 async def scan_qr_code(qr_token: str,
                        company_id: UUID,
                        db: AsyncSession = Depends(get_db),
-                       current_user: UserDB = Depends(__get_user_from_token)):
+                       current_user: UserDB = Depends(__get_user_from_token)) -> GetUserQrPayloadResponse:
     # Проверка прав
     user_role_model = await __get_user_role_model(user_id=current_user.user_id, session=db,
                                                   company_id=company_id)
@@ -211,8 +211,9 @@ async def scan_qr_code(qr_token: str,
         user_id = payload.get('user_id')
         if not user_id:
             raise HTTPException(status_code=400, detail="Invalid QR code: no user_id found")
+        exp = payload.get('exp')
         user = await __get_user_by_id(user_id, db)
-        return {"user_id": user.user_id}
+        return GetUserQrPayloadResponse(user_id=user.user_id, exp=exp)
     except HTTPException:
         raise
     except Exception as e:

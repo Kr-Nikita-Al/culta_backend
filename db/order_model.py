@@ -41,15 +41,7 @@ class OrderDB(Base):
     bonus_transaction = Column(Float, default=0)
 
     # Relationships
-    products = relationship(
-        "ProductCardDB",
-        secondary="order_product_association",
-        back_populates="orders"
-    )
-    order_items = relationship(
-        "OrderProductAssociationDB",
-        back_populates="order_info"
-    )
+    order_items = relationship("OrderProductAssociationDB", back_populates="order_info")
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

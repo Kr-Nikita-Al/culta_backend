@@ -1,11 +1,11 @@
 from datetime import datetime
-from typing import Optional
+from typing import Union
 from uuid import UUID
 
 from utils.base_model_response import BaseModelResponse
 
 
-class GetProductCardResponse(BaseModelResponse):
+class GetBaseProductCardResponse(BaseModelResponse):
     product_card_id: UUID
     company_id: UUID
     title: str
@@ -16,7 +16,6 @@ class GetProductCardResponse(BaseModelResponse):
     hint_description: str
     product_category: str
     custom_product_category: str
-    product_release_type: str
     allergens_list: str
     quantity_system: str
     tags: str
@@ -26,12 +25,8 @@ class GetProductCardResponse(BaseModelResponse):
     is_hotness: bool
     is_active: bool
     count_number: int
-    price_field_1: int
-    price_field_2: int
-    cost_price_field_1: int
-    cost_price_field_2: int
-    cashback_field_1: int
-    cashback_field_2: int
+    price: float
+    cashback_perc: float
     product_quantity: int
     calorie_content: int
     proteins: int
@@ -41,7 +36,26 @@ class GetProductCardResponse(BaseModelResponse):
     company_group_id: int
     image_product_id: UUID
     image_icon_id: UUID
+
+    @classmethod
+    def from_orm(cls, product_card):
+        data = {c.name: getattr(product_card, c.name)
+                for c in product_card.__table__.columns}
+        return cls(**data)
+
+
+class GetClientProductCardResponse(GetBaseProductCardResponse):
+    """Ответ для клиента"""
+
+
+class GetStaffProductCardResponse(GetBaseProductCardResponse):
+    """Ответ для сотрудника"""
+    product_release_type: str
+    cost_price: float
     creator_id: UUID
     updater_id: UUID
     time_created: datetime
     time_updated: datetime
+
+
+GetProductCardResponse = Union[GetStaffProductCardResponse, GetClientProductCardResponse]

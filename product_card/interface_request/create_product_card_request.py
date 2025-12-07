@@ -1,7 +1,8 @@
 from typing import Optional
 from uuid import UUID
+from fastapi import HTTPException
 
-from pydantic import BaseModel, constr, conint, StrictBool
+from pydantic import BaseModel, constr, conint, StrictBool, confloat, validator
 
 
 class CreateProductCardRequest(BaseModel):
@@ -19,12 +20,9 @@ class CreateProductCardRequest(BaseModel):
     quantity_system: Optional[constr()]
     tags: Optional[constr()]
     count_number: Optional[conint()]
-    price_field_1: Optional[conint()]
-    price_field_2: Optional[conint()]
-    cost_price_field_1: Optional[conint()]
-    cost_price_field_2: Optional[conint()]
-    cashback_field_1: Optional[conint()]
-    cashback_field_2: Optional[conint()]
+    price: Optional[confloat()]
+    cost_price: Optional[confloat()]
+    cashback_perc: Optional[confloat()]
     product_quantity: Optional[conint()]
     calorie_content: Optional[conint()]
     proteins: Optional[conint()]
@@ -40,3 +38,56 @@ class CreateProductCardRequest(BaseModel):
     image_product_id: Optional[constr()]
     image_icon_id: Optional[constr()]
 
+    @validator("price")
+    def validate_price(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect price")
+        return value
+
+    @validator("cost_price")
+    def validate_cost_price(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect cost_price")
+        return value
+
+    @validator("cashback_perc")
+    def validate_cashback_perc(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect cashback_perc")
+        return value
+
+    @validator("product_quantity")
+    def validate_product_quantity(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect product_quantity")
+        return value
+
+    @validator("calorie_content")
+    def validate_calorie_content(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect calorie_content")
+        return value
+
+    @validator("proteins")
+    def validate_proteins(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect proteins")
+        return value
+
+    @validator("fats")
+    def validate_fats(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect fats")
+        return value
+
+    @validator("carbohydrates")
+    def validate_carbohydrates(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect carbohydrates")
+        return value
+
+    @validator("cooking_time")
+    def validate_cooking_time(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect cooking_time")
+        return value

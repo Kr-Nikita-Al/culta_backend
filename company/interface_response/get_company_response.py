@@ -20,6 +20,8 @@ class GetCompanyResponse(BaseModelResponse):
     email: EmailStr
     is_active: bool
     order_number: int
+    city: str
+    region: str
     basic_screen_id: UUID
     group_id: int
     image_picture_id: UUID

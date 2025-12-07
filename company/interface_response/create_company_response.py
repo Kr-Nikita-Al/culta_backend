@@ -13,6 +13,8 @@ class CreateCompanyResponse(BaseModelResponse):
     phone: str
     email: EmailStr
     order_number: int
+    city: str
+    region: str
     basic_screen_id: UUID
     group_id: int
     image_picture_id: UUID

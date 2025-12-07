@@ -4,6 +4,8 @@ from typing import Optional
 from fastapi import HTTPException
 from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool
 
+from utils import LETTER_MATCH_PATTERN_PHONE
+
 
 class UpdateOrderRequest(BaseModel):
     company_name: Optional[constr(min_length=1, max_length=20)]

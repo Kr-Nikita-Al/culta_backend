@@ -12,6 +12,8 @@ class CreateCompanyRequest(BaseModel):
     address: Optional[constr(min_length=1, max_length=50)]
     phone: constr()
     email: EmailStr
+    city: Optional[constr()]
+    region: Optional[constr()]
     order_number: Optional[conint()]
     age_limit: StrictBool
     work_state: StrictBool

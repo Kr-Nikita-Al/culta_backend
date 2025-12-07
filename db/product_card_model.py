@@ -1,10 +1,8 @@
 from datetime import datetime
 import uuid
-from typing import List
-
-from sqlalchemy import Column, ForeignKey, Integer, DateTime, String, Boolean
+from sqlalchemy import Column, ForeignKey, Integer, DateTime, String, Boolean, Float
 from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship, Mapped
+from sqlalchemy.orm import relationship
 
 from db.base_model import Base
 from utils.constants import EMPTY_UUID
@@ -33,12 +31,9 @@ class ProductCardDB(Base):
     tags = Column(String(35), default='')
 
     count_number = Column(Integer, default=0)
-    price_field_1 = Column(Integer, default=0)
-    price_field_2 = Column(Integer, default=0)
-    cost_price_field_1 = Column(Integer, default=0)
-    cost_price_field_2 = Column(Integer, default=0)
-    cashback_field_1 = Column(Integer, default=0)
-    cashback_field_2 = Column(Integer, default=0)
+    price = Column(Float, default=0)
+    cost_price = Column(Float, default=0)
+    cashback_perc = Column(Float, default=0)
     product_quantity = Column(Integer, default=0)
     calorie_content = Column(Integer, default=0)
     proteins = Column(Integer, default=0)
@@ -60,15 +55,7 @@ class ProductCardDB(Base):
 
     # Relationships
     item = relationship("ItemDB", back_populates="product_card_info", lazy="joined")
-    orders = relationship(
-        "OrderDB",
-        secondary="order_product_association",
-        back_populates="products"
-    )
-    order_items = relationship(
-        "OrderProductAssociationDB",
-        back_populates="product_info"
-    )
+    order_items = relationship("OrderProductAssociationDB", back_populates="product_info")
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)

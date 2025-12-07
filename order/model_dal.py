@@ -1,8 +1,12 @@
 from uuid import UUID
+from typing import Union
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, and_, update, delete
+from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import selectinload
 
-from db import OrderDB
+from db import OrderDB, OrderProductAssociationDB
 
 
 class OrderDal:
@@ -23,18 +27,16 @@ class OrderDal:
         await self.db_session.flush()
         return new_order
 
-    # async def get_image_by_id(self, image_id: UUID, is_used: bool) -> Union[ImageDB, None]:
-    #     if is_used:
-    #         query = select(ImageDB).where(and_(ImageDB.image_id == image_id,
-    #                                            ImageDB.is_used == True))
-    #     else:
-    #         query = select(ImageDB).where(ImageDB.image_id == image_id)
-    #     res = await self.db_session.execute(query)
-    #     image_row = res.scalars().first()
-    #     if image_row is not None:
-    #         return image_row
-    #     return None
-    #
+    async def get_order_by_id(self, order_id: UUID) -> Union[OrderDB, None]:
+        query = select(OrderDB).where(OrderDB.order_id == order_id) \
+            .options(selectinload(OrderDB.order_items) \
+                     .selectinload(OrderProductAssociationDB.product_info))
+        res = await self.db_session.execute(query)
+        order_row = res.scalars().first()
+        if order_row is not None:
+            return order_row
+        return None
+
     # async def get_images_by_company_id(self, company_id: UUID) -> List[ImageDB]:
     #     query = select(ImageDB).where(ImageDB.company_id == company_id)
     #     res = await self.db_session.execute(query)
