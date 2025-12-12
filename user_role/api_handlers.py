@@ -63,7 +63,7 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
     try:
         return await __grant_user_role(user_role_params, db)
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
 
@@ -85,7 +85,7 @@ async def grant_staff_privilege(promo_user_id: UUID,
     """
     # Проверка на корректность заданной роли
     if role not in [role.value for role in PortalRole if role not in [PortalRole.PORTAL_ROLE_SUPER_ADMIN, PortalRole.PORTAL_ROLE_USER]]:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
     # Проверка на возможность выделения прав авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)
@@ -116,7 +116,7 @@ async def grant_staff_privilege(promo_user_id: UUID,
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @user_role_router.delete('/revoke_staff_privilege', response_model=RevokeUserRoleResponse)
@@ -136,7 +136,7 @@ async def revoke_staff_privilege(demo_user_id: UUID,
     """
     # Проверка на корректность заданной роли
     if role not in [role.value for role in PortalRole if role not in [PortalRole.PORTAL_ROLE_SUPER_ADMIN, PortalRole.PORTAL_ROLE_USER]]:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
     # Проверка на возможность удаление авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=company_id)
@@ -170,4 +170,4 @@ async def revoke_staff_privilege(demo_user_id: UUID,
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')

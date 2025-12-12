@@ -37,7 +37,7 @@ async def create_screen(body: CreateScreenRequest,
     try:
         return await __create_screen(body, cur_user.user_id, db)
     except (DBAPIError, IntegrityError, UniqueViolationError) as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @screen_router.get('/get_by_id', response_model=GetScreenResponse)

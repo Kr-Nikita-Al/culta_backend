@@ -1,5 +1,5 @@
 from uuid import UUID
-from typing import Union
+from typing import Union, List
 
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, and_, update, delete
@@ -33,23 +33,22 @@ class OrderDal:
                      .selectinload(OrderProductAssociationDB.product_info))
         res = await self.db_session.execute(query)
         order_row = res.scalars().first()
-        if order_row is not None:
-            return order_row
-        return None
+        return order_row
 
-    # async def get_images_by_company_id(self, company_id: UUID) -> List[ImageDB]:
-    #     query = select(ImageDB).where(ImageDB.company_id == company_id)
-    #     res = await self.db_session.execute(query)
-    #     image_row = res.unique().scalars().all()
-    #     if image_row is not None:
-    #         return image_row
-    #     return []
-    #
-    # async def delete_image(self, image_id: UUID) -> UUID:
-    #     query = delete(ImageDB).where(ImageDB.image_id == image_id)
-    #     await self.db_session.execute(query)
-    #     return image_id
-    #
+    async def get_orders_in_company(self, company_id: UUID) -> List[OrderDB]:
+        query = select(OrderDB).where(OrderDB.company_id == company_id).options(selectinload(OrderDB.order_items) \
+                     .selectinload(OrderProductAssociationDB.product_info))
+        res = await self.db_session.execute(query)
+        order_rows = res.unique().scalars().all()
+        return order_rows
+
+    async def get_user_orders(self, user_id: UUID) -> List[OrderDB]:
+        query = select(OrderDB).where(OrderDB.user_id == user_id).options(selectinload(OrderDB.order_items) \
+                     .selectinload(OrderProductAssociationDB.product_info))
+        res = await self.db_session.execute(query)
+        order_rows = res.unique().scalars().all()
+        return order_rows
+
     # async def update_image(self, image_id: UUID, **kwargs) -> Union[UUID, None]:
     #     query = update(ImageDB).where(and_(ImageDB.image_id == image_id,
     #                                        ImageDB.is_used == False)) \

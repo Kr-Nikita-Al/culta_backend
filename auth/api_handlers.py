@@ -89,7 +89,7 @@ async def auth_yandex_callback(
         )
 
         if user_response.status_code != 200:
-            raise HTTPException(400, "Failed to fetch user data")
+            raise HTTPException(400, "Failed to fetch user static_data")
 
         user_data = user_response.json()
 

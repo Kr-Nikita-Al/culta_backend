@@ -86,7 +86,7 @@ async def get_storage_info_company_by_id(company_id: UUID,
                                                  used_count=len(images),
                                                  used_size=sum(list(storage_objects.values())))
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @s3_directory_router.patch('/rename', response_model=Dict)
@@ -142,6 +142,6 @@ async def delete_directory(body: DeleteDirectoryRequest,
                 list_deleted_id.append(del_image_id)
         return {'deleted image id': list_deleted_id}
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 

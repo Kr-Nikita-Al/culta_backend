@@ -55,7 +55,7 @@ async def create_item(body: CreateItemRequest,
     try:
         return await __create_item(body, db)
     except (DBAPIError, IntegrityError, UniqueViolationError) as e:
-        raise HTTPException(status_code=422, detail='Incorrect data ')
+        raise HTTPException(status_code=422, detail='Incorrect static_data ')
 
 
 @item_router.get('/get_by_id', response_model=GetItemResponse)

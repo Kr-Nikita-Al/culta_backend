@@ -13,8 +13,8 @@ services:
     networks:
       - custom
 #    volumes:
-#      # переменная models-data хранит путь, в котором данные контейнера хранятся в гостевой системе
-#      - models-data: /var/lib/postgresql/data
+#      # переменная models-static_data хранит путь, в котором данные контейнера хранятся в гостевой системе
+#      - models-static_data: /var/lib/postgresql/static_data
   culta_backend_fa:
     container_name: culta_backend_fa
     image: culta_backend_fa

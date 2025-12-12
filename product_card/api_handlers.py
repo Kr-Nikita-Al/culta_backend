@@ -39,7 +39,7 @@ async def create_product_card(body: CreateProductCardRequest,
         return product_card
     except DBAPIError as e:
         raise HTTPException(status_code=422,
-                            detail='Incorrect data')
+                            detail='Incorrect static_data')
 
 
 @product_card_router.delete("/delete", response_model=DeleteProductCardResponse)
@@ -83,15 +83,22 @@ async def get_product_card_by_id(product_card_id: UUID,
     return product_card
 
 
-# @product_card_router.get('/get_product_cards_company_by_id', response_model=GetProductsInCompanyResponse)
-# async def get_product_cards_by_company_id(company_id: UUID,
-#                                           db: AsyncSession = Depends(get_db)) -> GetProductsInCompanyResponse:
-#     company = await __get_company_by_id(company_id, db)
-#     if company is None:
-#         raise HTTPException(status_code=404,
-#                             detail='Company with id {0} is not found or was deleted before'.format(company_id))
-#     products = await __get_products_by_company_id(company_id, db)
-#     return GetProductsInCompanyResponse(products=products)
+@product_card_router.get('/get_product_cards_company_by_id', response_model=GetProductsInCompanyResponse)
+async def get_product_cards_by_company_id(company_id: UUID,
+                                          db: AsyncSession = Depends(get_db),
+                                          cur_user: UserDB = Depends(__get_user_from_token)) -> GetProductsInCompanyResponse:
+    is_staff = False
+    if company_id != EMPTY_UUID:
+        # Проверка прав на получение информации о заказе сотрудником
+        cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
+                                                          company_id=company_id)
+        is_staff = cur_user_role_model.is_admin or cur_user_role_model.is_owner or cur_user_role_model.is_waiter
+    company = await __get_company_by_id(company_id, db)
+    if company is None:
+        raise HTTPException(status_code=404,
+                            detail='Company with id {0} is not found or was deleted before'.format(company_id))
+    products = await __get_products_by_company_id(company_id, is_staff, db)
+    return products
 
 
 @product_card_router.patch('/update_by_id', response_model=UpdateProductResponse)

@@ -43,7 +43,7 @@ async def create_container(body: CreateContainerRequest,
     try:
         return await __create_container(body, db)
     except (DBAPIError, IntegrityError, UniqueViolationError) as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @container_router.get('/get_by_id', response_model=GetContainerResponse)

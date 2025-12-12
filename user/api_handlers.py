@@ -47,7 +47,7 @@ async def create_user(body: CreateUserRequest, db: AsyncSession = Depends(get_db
         return user
     except DBAPIError as e:
         raise HTTPException(status_code=422,
-                            detail='Incorrect data')
+                            detail='Incorrect static_data')
 
 
 @user_router.delete("/delete", response_model=DeleteUserResponse)
@@ -121,7 +121,7 @@ async def update_user_bonus_balance(user_id: UUID,
     update_user_params = {'bonus_balance': user_for_update.bonus_balance}
     if body.is_write_off:
         if (update_user_params['bonus_balance'] - body.amount) < 0:
-            raise HTTPException(status_code=422, detail='Incorrect data')
+            raise HTTPException(status_code=422, detail='Incorrect static_data')
         update_user_params['bonus_balance'] -= body.amount
     else:
         update_user_params['bonus_balance'] += body.amount
@@ -192,7 +192,7 @@ async def update_qr_code_by_id(user_id: UUID,
         return GetUserQrCodeResponse(qr_code=user.qr_code)
     except DBAPIError as e:
         raise HTTPException(status_code=422,
-                            detail='Incorrect data')
+                            detail='Incorrect static_data')
 
 
 @user_router.post("/scan_qr_code", response_model=GetUserQrPayloadResponse)

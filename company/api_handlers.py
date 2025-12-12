@@ -37,7 +37,7 @@ async def create_company(body: CreateCompanyRequest,
                                         dir_name="company_{0}/".format(str(company.company_id)))
         return company
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @company_router.delete("/delete", response_model=DeleteCompanyResponse)

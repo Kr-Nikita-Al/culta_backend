@@ -56,9 +56,9 @@ async def upload(metadata: str = Form(...),
                                        filename=new_filename,company_id=data.company_id)
         return image_obj
     except ValidationError as e:
-        raise HTTPException(status_code=400, detail="Bad request data")
+        raise HTTPException(status_code=400, detail="Bad request static_data")
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @image_router.post("/create_loaded_url", response_model=CreateImageResponse)
@@ -80,7 +80,7 @@ async def create_loaded_url(body: CreateImageRequest,
             image=image
         )
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @image_router.get('/get_used_by_id', response_model=GetImageResponse)
@@ -119,7 +119,7 @@ async def get_image_by_id(image_id: UUID,
                                                         company_id=image_obj.company_id)
         return GetImageResponse(url=url, image=image_obj)
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @image_router.get('/get_images_company_by_id', response_model=GetImagesInCompanyResponse)
@@ -162,7 +162,7 @@ async def delete_image(image_id: UUID,
                                    company_id=del_image_obj.company_id)
         return DeleteImageResponse(deleted_image_id=del_image_id)
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
 
 
 @image_router.patch('/update_by_id', response_model=UpdateImageResponse)
@@ -276,7 +276,7 @@ async def get_folder_images(
             except Exception:
                 continue
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
     print(images)
     return {"images": images}
 
@@ -314,6 +314,6 @@ async def refresh_folder_urls(
                                                                                      file_size=image.size,
                                                                                      company_id=image.company_id)
     except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect data')
+        raise HTTPException(status_code=422, detail='Incorrect static_data')
     return {"urls": updated_urls}
 

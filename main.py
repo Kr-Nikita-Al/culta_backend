@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from settings import ENV
 
 import uvicorn
@@ -7,6 +9,8 @@ from order import order_router
 from s3_directory import s3_directory_router
 from settings import APP_PORT
 from auth import login_router
+from static_data.api_handlers import static_data_router
+from static_data.city_region import CityManager
 from user import user_router
 from company import company_router
 from image import image_router
@@ -20,8 +24,15 @@ from fastapi.middleware.cors import CORSMiddleware
 # БЛОК ОПИСАНИЯ API ROUTES  #
 #############################
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup логика
+    CityManager.load_cities("static_data/city_region/data.json")
+    yield
+
 # Создание приложения
-app = FastAPI(title="culta_backend")
+app = FastAPI(title="culta_backend", lifespan=lifespan)
 
 # Создаем основной роутер
 main_api_router = APIRouter()
@@ -61,6 +72,8 @@ main_api_router.include_router(container_router, prefix="/container_navigation",
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
 main_api_router.include_router(login_router, prefix="/login", tags=["login"])
 main_api_router.include_router(order_router, prefix="/order", tags=["order_router"])
+main_api_router.include_router(static_data_router, prefix="/static_data", tags=["static_data_router"])
+
 
 # Добавляем роутер в приложение
 app.include_router(main_api_router)

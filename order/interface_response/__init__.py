@@ -2,3 +2,6 @@ from order.interface_response.create_order_response import CreateOrderResponse
 from order.interface_response.update_order_response import UpdateOrderResponse
 from order.interface_response.get_order_response import GetClientOrderResponse, GetStaffOrderResponse, GetOrderResponse
 from order.interface_response.get_all_order_response import GetAllOrderResponse
+from order.interface_response.get_orders_response import (GetOrdersResponse,
+                                                          GetStaffOrdersResponse,
+                                                          GetClientOrdersResponse)
