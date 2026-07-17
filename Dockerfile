@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=python:3.9-slim-buster
+ARG BASE_IMAGE=python:3.9-slim-bookworm
 FROM $BASE_IMAGE
 
 # system update & package install
