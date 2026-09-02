@@ -1,5 +1,6 @@
 from contextlib import asynccontextmanager
 
+from order.websocket.api_handlers import order_websocket_router
 from settings import ENV
 
 import uvicorn
@@ -20,11 +21,6 @@ from user_role import user_role_router
 from utils.ping_api import service_router
 from fastapi.middleware.cors import CORSMiddleware
 
-#############################
-# БЛОК ОПИСАНИЯ API ROUTES  #
-#############################
-
-
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup логика
@@ -33,6 +29,10 @@ async def lifespan(app: FastAPI):
 
 # Создание приложения
 app = FastAPI(title="culta_backend", lifespan=lifespan)
+
+#############################
+# БЛОК ОПИСАНИЯ API ROUTES  #
+#############################
 
 # Создаем основной роутер
 main_api_router = APIRouter()
@@ -72,6 +72,7 @@ main_api_router.include_router(container_router, prefix="/container_navigation",
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
 main_api_router.include_router(login_router, prefix="/login", tags=["login"])
 main_api_router.include_router(order_router, prefix="/order", tags=["order_router"])
+main_api_router.include_router(order_websocket_router, prefix="/order_websocket_router", tags=["order_websocket_router"])
 main_api_router.include_router(static_data_router, prefix="/static_data", tags=["static_data_router"])
 
 

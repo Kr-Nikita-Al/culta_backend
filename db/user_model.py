@@ -36,5 +36,6 @@ class UserDB(Base):
     time_updated = Column(DateTime(timezone=True), default=datetime.now(), onupdate=datetime.now())
 
     accounts = relationship("AuthAccountDB", back_populates="user")
-
-
+    roles = relationship("UserRoleDB", foreign_keys="[UserRoleDB.user_id]",
+                         primaryjoin="UserDB.user_id == UserRoleDB.user_id",
+                         lazy="selectin")

@@ -1,1 +1,2 @@
 from order.order_product_association.actions.create_order_product_action import __create_order_product_action
+from order.order_product_association.actions.update_order_product_action import __update_order_product_action

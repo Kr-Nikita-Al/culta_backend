@@ -1,1 +1,2 @@
 from order.order_product_association.interface_request.create_order_product_request import CreateOrderProductRequest
+from order.order_product_association.interface_request.update_order_product_request import UpdateOrderProductRequest

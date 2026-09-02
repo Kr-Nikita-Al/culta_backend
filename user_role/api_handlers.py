@@ -15,7 +15,7 @@ from user_role.actions import __grant_user_role, __get_user_roles, __revoke_user
 from user_role.interface_request import GrantUserRoleRequest, RevokeUserRoleRequest
 from user_role.interface_response import GrantUserRoleResponse, GetUserRolesResponse, RevokeUserRoleResponse
 from user_role.model_user_roles import UserRoleModel
-from utils.constants import PortalRole
+from utils.constants import PortalRole, CHANGEABLE_PORTAL_ROLES
 
 user_role_router = APIRouter()
 
@@ -84,7 +84,7 @@ async def grant_staff_privilege(promo_user_id: UUID,
     :return: id клиента, выданному права администратора
     """
     # Проверка на корректность заданной роли
-    if role not in [role.value for role in PortalRole if role not in [PortalRole.PORTAL_ROLE_SUPER_ADMIN, PortalRole.PORTAL_ROLE_USER]]:
+    if role not in CHANGEABLE_PORTAL_ROLES:
         raise HTTPException(status_code=422, detail='Incorrect static_data')
     # Проверка на возможность выделения прав авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
@@ -135,7 +135,7 @@ async def revoke_staff_privilege(demo_user_id: UUID,
     :return: id клиента, выданному права администратора
     """
     # Проверка на корректность заданной роли
-    if role not in [role.value for role in PortalRole if role not in [PortalRole.PORTAL_ROLE_SUPER_ADMIN, PortalRole.PORTAL_ROLE_USER]]:
+    if role not in CHANGEABLE_PORTAL_ROLES:
         raise HTTPException(status_code=422, detail='Incorrect static_data')
     # Проверка на возможность удаление авторизованным пользователем
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,

@@ -4,3 +4,5 @@ from user.interface_response.delete_user_response import DeleteUserResponse
 from user.interface_response.update_user_response import UpdateUserResponse
 from user.interface_response.get_user_qr_code_by_id_response import GetUserQrCodeResponse
 from user.interface_response.get_user_qr_payload_response import GetUserQrPayloadResponse
+from user.interface_response.get_user_staff_response import UserWithRolesResponse
+from user.interface_response.get_search_user_response import UserSearchResponse, PaginatedUsersResponse

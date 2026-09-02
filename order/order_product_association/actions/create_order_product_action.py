@@ -5,7 +5,8 @@ from order.order_product_association.interface_response import CreateOrderProduc
 from order.order_product_association.model_dal import OrderProductAssociationDal
 
 
-async def __create_order_product_action(order_body: CreateOrderProductRequest, session: AsyncSession) -> CreateOrderProductResponse:
+async def __create_order_product_action(order_body: CreateOrderProductRequest,
+                                        session: AsyncSession) -> CreateOrderProductResponse:
     async with session.begin():
         order_product_dal = OrderProductAssociationDal(session)
         order_product_db = await order_product_dal.create_order_product(

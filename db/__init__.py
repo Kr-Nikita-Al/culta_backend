@@ -7,7 +7,7 @@ from db.user_model import UserDB
 from db.user_role_model import UserRoleDB
 from db.auth_account_model import AuthAccountDB, AuthProvider
 from db.product_card_model import ProductCardDB
-from db.order_model import OrderDB, STATUS_TYPE
+from db.order_model import OrderDB, STATUS_TYPE, STATUS_VALUES
 from db.order_product_association_model import OrderProductAssociationDB
 
 

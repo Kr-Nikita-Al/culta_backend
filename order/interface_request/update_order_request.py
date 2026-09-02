@@ -1,31 +1,17 @@
-from datetime import time
-from typing import Optional
-
+from typing import Optional, List
 from fastapi import HTTPException
-from pydantic import BaseModel, validator, constr, EmailStr, conint, StrictBool
+from pydantic import BaseModel, validator, constr, conint
 
-from utils import LETTER_MATCH_PATTERN_PHONE
+from order.interface_request.create_order_request import OrderProductItem
 
 
 class UpdateOrderRequest(BaseModel):
-    company_name: Optional[constr(min_length=1, max_length=20)]
-    address: Optional[constr(min_length=1, max_length=50)]
-    phone: Optional[constr()]
-    email: Optional[EmailStr]
-    order_number: Optional[conint()]
-    basic_screen_id: Optional[constr()]
-    company_group_id: Optional[conint()]
-    image_picture_id: Optional[constr()]
-    image_icon_id: Optional[constr()]
-    age_limit: Optional[StrictBool]
-    work_state: Optional[StrictBool]
-    start_time: Optional[time]
-    over_time: Optional[time]
+    comment: Optional[constr()]
+    cocking_time: Optional[conint()]
+    order_items: Optional[List[OrderProductItem]]
 
-    @validator("phone")
-    def validate_name(cls, value):
-        if not LETTER_MATCH_PATTERN_PHONE.match(value):
-            raise HTTPException(
-                status_code=422, detail="Incorrect phone"
-            )
+    @validator("cocking_time")
+    def validate_cocking_time(cls, value):
+        if value < 0:
+            raise HTTPException(status_code=422, detail="Incorrect cocking_time")
         return value

@@ -24,6 +24,9 @@ class STATUS_TYPE(PyEnum):
     CLOSED = "closed"
 
 
+STATUS_VALUES = {status.value for status in STATUS_TYPE}
+
+
 class OrderDB(Base):
     __tablename__ = 'orders'
     order_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

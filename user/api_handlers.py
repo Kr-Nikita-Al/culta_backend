@@ -1,5 +1,5 @@
 import asyncio
-from typing import Dict
+from typing import Dict, List
 from uuid import UUID
 
 from fastapi import Depends, HTTPException
@@ -10,11 +10,12 @@ from db import UserDB
 from s3_directory.storage.s3client import S3Client
 from user.actions import __create_user, __delete_user, __get_user_by_id, __update_user, \
     __check_user_permissions_on_delete, __check_user_permissions_on_update, \
-    __check_user_permissions_on_update_bonus_balance, __generate_qr_base64, __verify_qr_token
+    __check_user_permissions_on_update_bonus_balance, __generate_qr_base64, __verify_qr_token, \
+    __get_user_staff_by_company_id, __get_search_users, __get_initial_search_users
 from user.actions.get_current_user_from_token_action import __get_user_from_token, __get_user_by_email_for_auth
 from user.interface_request import CreateUserRequest, UpdateUserRequest, UpdateBonusBalanceRequest
 from user.interface_response import CreateUserResponse, DeleteUserResponse, GetUserResponse, UpdateUserResponse, \
-    GetUserQrCodeResponse, GetUserQrPayloadResponse
+    GetUserQrCodeResponse, GetUserQrPayloadResponse, UserWithRolesResponse, PaginatedUsersResponse
 
 from db.session import get_db
 
@@ -218,3 +219,48 @@ async def scan_qr_code(qr_token: str,
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error processing QR code: {str(e)}")
+
+
+@user_router.get("/get_employees", response_model=List[UserWithRolesResponse],
+                 summary="Получить сотрудников компании",
+                 description="Возвращает информацию о всех сотрудниках в указанной компании с их ролями")
+async def get_company_employees(company_id: UUID,
+                                db: AsyncSession = Depends(get_db),
+                                current_user: UserDB = Depends(__get_user_from_token)):
+    """
+    Получить всех сотрудников компании с их ролями.
+    """
+    # Проверка прав на получение информации о заказе сотрудником
+    cur_user_role_model = await __get_user_role_model(user_id=current_user.user_id, session=db,
+                                                      company_id=company_id)
+    if len(cur_user_role_model.user_roles) > 0:
+        raise HTTPException(status_code=403, detail='Forbidden')
+    # Находим всех пользователей, у которых есть роли в указанной компании
+    users = await __get_user_staff_by_company_id(company_id, db)
+    return users
+
+
+@user_router.get("/get_all_users_by",
+                 response_model=PaginatedUsersResponse,
+                 summary="Получить пользователей для выдачи/отзыва ролей",
+                 description="""Возвращает список пользователей в двух кейсах:
+                                1) Сначала первые 100 юзеров: сотрудники компании админа + последние зарегистрированные.
+                                2) Затем используя параметр search находим подходящие""")
+async def get_users_for_admin(company_id: UUID,
+                              search: str = '',
+                              offset: int = 0,
+                              db: AsyncSession = Depends(get_db),
+                              current_user: UserDB = Depends(__get_user_from_token)):
+
+    # Проверка прав на получение информации о заказе сотрудником
+    cur_user_role_model = await __get_user_role_model(user_id=current_user.user_id, session=db,
+                                                      company_id=company_id)
+    if not(cur_user_role_model.is_owner or cur_user_role_model.is_admin):
+        raise HTTPException(status_code=403, detail='Forbidden')
+    if search:
+        # Поиск по строке поиска
+        return await __get_search_users(search, company_id, db)
+    else:
+        # Первоначальный запрос: сотрудники компании + последние пользователи
+        return await __get_initial_search_users(company_id, db)
+
