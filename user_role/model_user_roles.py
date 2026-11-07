@@ -27,10 +27,13 @@ class UserRoleModel:
         return PortalRole.PORTAL_ROLE_WAITER in self.user_roles
 
     @property
+    def is_hostess(self) -> bool:
+        return PortalRole.PORTAL_ROLE_HOSTESS in self.user_roles
+
+    @property
     def is_cook(self) -> bool:
         return PortalRole.PORTAL_ROLE_COOK in self.user_roles
 
     def check_existing_role(self, role: PortalRole):
         return role in self.user_roles
-
 

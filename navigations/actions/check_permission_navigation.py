@@ -16,4 +16,4 @@ async def __check_permission_navigation(user_id: UUID, session: AsyncSession, co
     """
     cur_user_role_model = await __get_user_role_model(user_id=user_id, session=session,
                                                       company_id=company_id)
-    return cur_user_role_model.is_admin or cur_user_role_model.is_moderator
+    return cur_user_role_model.is_owner or cur_user_role_model.is_admin or cur_user_role_model.is_moderator

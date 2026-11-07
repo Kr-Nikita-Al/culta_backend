@@ -23,6 +23,31 @@ from utils.constants import BASE_STORAGE_DIRECTORY, QUOTA_COUNT_IMAGES_BY_COMPAN
 s3_directory_router = APIRouter()
 
 
+@s3_directory_router.get('/pending_deletions')
+async def pending_deletions(company_id: UUID, db: AsyncSession = Depends(get_db),
+                            cur_user: UserDB = Depends(__get_user_from_token)):
+    from sqlalchemy import select
+    from db import StorageDeleteDB
+    role = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=company_id)
+    if not (role.is_owner or role.is_admin or role.is_moderator):
+        raise HTTPException(403, 'Forbidden')
+    async with db.begin():
+        rows = (await db.scalars(select(StorageDeleteDB).where(StorageDeleteDB.company_id == company_id,
+            StorageDeleteDB.status == 'pending').order_by(StorageDeleteDB.created_at).limit(50))).all()
+        return [{'operation_id': row.operation_id, 'prefix': row.prefix,
+                 'file_count': len(row.keys), 'created_at': row.created_at} for row in rows]
+
+
+@s3_directory_router.post('/retry_deletion')
+async def retry_deletion(company_id: UUID, operation_id: UUID, db: AsyncSession = Depends(get_db),
+                         cur_user: UserDB = Depends(__get_user_from_token)):
+    role = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=company_id)
+    if not (role.is_owner or role.is_admin or role.is_moderator):
+        raise HTTPException(403, 'Forbidden')
+    from image.directory_delete import retry_directory_delete
+    return await retry_directory_delete(db, company_id, operation_id, S3Client())
+
+
 @s3_directory_router.post("/create", response_model=Dict)
 async def create_directory(body: CreateDirectoryRequest,
                            db: AsyncSession = Depends(get_db),
@@ -31,14 +56,19 @@ async def create_directory(body: CreateDirectoryRequest,
         raise HTTPException(status_code=422, detail='Incorrect directory path or name')
     # Проверка прав на создание директории внутри папки компании
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=body.company_id)
-    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+    if not (cur_user_role_model.is_owner or cur_user_role_model.is_admin or cur_user_role_model.is_moderator):
         raise HTTPException(status_code=403, detail='Forbidden')
     # Проверка совпадения пути папки компании, где хотят создать, с компанией, на которую выданы права доступа
     company_dir_path = BASE_STORAGE_DIRECTORY.COMPANY + "company_{0}".format(str(body.company_id))
     if company_dir_path != body.dir_path[:body.dir_path.index('/', body.dir_path.index('/') + 1)]:
         raise HTTPException(status_code=422, detail='Incorrect directory path')
     s3client = S3Client()
-    await s3client.create_directory(dir_path=body.dir_path, dir_name=body.dir_name)
+    from image.directory_delete import lock_company
+    from image.delete_guard import require_no_pending_delete
+    async with db.begin():
+        await lock_company(db, body.company_id)
+        await require_no_pending_delete(db, body.company_id)
+        await s3client.create_directory(dir_path=body.dir_path, dir_name=body.dir_name)
     return {'Success': 200}
 
 
@@ -48,10 +78,10 @@ async def get_objects_in_company(company_id: UUID,
                                  cur_user: UserDB = Depends(__get_user_from_token)) -> Dict:
     # Проверка прав на создание директории внутри папки компании
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db, company_id=company_id)
-    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+    if not (cur_user_role_model.is_owner or cur_user_role_model.is_admin or cur_user_role_model.is_moderator):
         raise HTTPException(status_code=403, detail='Forbidden')
     s3client = S3Client()
-    obj_dict = await s3client.get_objects_by_dir_name(dir_name="company_{0}".format(str(company_id)))
+    obj_dict = await s3client.get_objects_by_dir_name(dir_name=f'{BASE_STORAGE_DIRECTORY.COMPANY}company_{company_id}/')
     return obj_dict
 
 
@@ -74,7 +104,7 @@ async def get_storage_info_company_by_id(company_id: UUID,
     # Проверка прав на получение лимитов
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id,
                                                       session=db, company_id=company_id)
-    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+    if not (cur_user_role_model.is_owner or cur_user_role_model.is_admin or cur_user_role_model.is_moderator):
         raise HTTPException(status_code=403, detail='Forbidden')
     try:
         images = await __get_images_by_company_id(company_id, db)
@@ -101,21 +131,11 @@ async def rename_directory(body: RenameDirectoryRequest,
     # Проверка прав на получение изображения
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=body.company_id)
-    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+    if not (cur_user_role_model.is_owner or cur_user_role_model.is_admin or cur_user_role_model.is_moderator):
         raise HTTPException(status_code=403, detail='Forbidden')
     try:
-        # Обновление директории в S3
-        s3client = S3Client()
-        await s3client.rename_directory(dir_path=body.dir_path, old_dir_name=body.old_dir_name,
-                                        new_dir_name=body.new_dir_name, company_id=body.company_id)
-        # Обновление директории в путях существующих изображений
-        images = await __get_images_by_company_id(body.company_id, db)
-        list_updated_id = []
-        for image in images:
-            if body.dir_path + body.old_dir_name in image.file_path:
-                upd_image_id = await __update_image_by_id(update_image_params={'file_path': body.dir_path + body.new_dir_name},
-                                                          image_id=image.image_id, session=db)
-                list_updated_id.append(upd_image_id)
+        from image.directory_move import rename_image_directory
+        list_updated_id = await rename_image_directory(db, body, S3Client())
         return {'updated image id': list_updated_id}
     except IntegrityError as e:
         raise HTTPException(status_code=503, detail='Database error')
@@ -128,20 +148,11 @@ async def delete_directory(body: DeleteDirectoryRequest,
     # Проверка прав на получение изображения
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=body.company_id)
-    if not cur_user_role_model.is_admin and not cur_user_role_model.is_moderator:
+    if not (cur_user_role_model.is_owner or cur_user_role_model.is_admin or cur_user_role_model.is_moderator):
         raise HTTPException(status_code=403, detail='Forbidden')
     try:
-        s3client = S3Client()
-        await s3client.delete_directory(dir_path=body.dir_path, dir_name=body.dir_name, company_id=body.company_id)
-        images = await __get_images_by_company_id(body.company_id, db)
-        # Удаление существующих изображений
-        list_deleted_id = []
-        for image in images:
-            if body.dir_path + body.dir_name in image.file_path:
-                del_image_id = await __delete_image(image.image_id, db)
-                list_deleted_id.append(del_image_id)
+        from image.directory_delete import delete_image_directory
+        list_deleted_id = await delete_image_directory(db, body, S3Client())
         return {'deleted image id': list_deleted_id}
     except DBAPIError as e:
         raise HTTPException(status_code=422, detail='Incorrect static_data')
-
-

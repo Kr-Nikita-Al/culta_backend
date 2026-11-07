@@ -1,12 +1,15 @@
 from typing import List
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import Literal
+from pydantic import BaseModel
+from sqlalchemy import select, or_, func
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import company.actions
-from db import UserDB
+from db import UserDB, UserRoleDB, CompanyDB
 from db.session import get_db
 from settings import ACCESS_SUPER_ADMINS
 from user.actions import __get_user_from_token, __get_user_by_id
@@ -15,9 +18,89 @@ from user_role.actions import __grant_user_role, __get_user_roles, __revoke_user
 from user_role.interface_request import GrantUserRoleRequest, RevokeUserRoleRequest
 from user_role.interface_response import GrantUserRoleResponse, GetUserRolesResponse, RevokeUserRoleResponse
 from user_role.model_user_roles import UserRoleModel
-from utils.constants import PortalRole, CHANGEABLE_PORTAL_ROLES
+from utils.constants import PortalRole, CHANGEABLE_PORTAL_ROLES, EMPTY_UUID
 
 user_role_router = APIRouter()
+
+
+class StaffCandidate(BaseModel):
+    user_id: UUID
+    name: str
+    surname: str
+    email_hint: str
+
+
+class StaffSearchResponse(BaseModel):
+    users: List[StaffCandidate]
+    has_more: bool
+
+
+@user_role_router.get('/staff_table')
+async def staff_table(company_id: UUID, page: int = Query(0, ge=0),
+                      db: AsyncSession = Depends(get_db), cur_user: UserDB = Depends(__get_user_from_token)):
+    roles = (await db.execute(select(UserRoleDB.role).where(
+        UserRoleDB.user_id == cur_user.user_id, UserRoleDB.is_active.is_(True),
+        or_(UserRoleDB.company_id == company_id,
+            (UserRoleDB.company_id == EMPTY_UUID) & (UserRoleDB.role == PortalRole.PORTAL_ROLE_SUPER_ADMIN))))).scalars().all()
+    model = UserRoleModel(user_roles=roles)
+    if not (model.is_super_admin or model.is_owner or model.is_admin):
+        raise HTTPException(403, 'Forbidden')
+    if not await db.scalar(select(CompanyDB.company_id).where(
+            CompanyDB.company_id == company_id, CompanyDB.is_active.is_(True))):
+        raise HTTPException(404, 'Company not found')
+    has_staff_role = select(UserRoleDB.relation_id).where(
+        UserRoleDB.user_id == UserDB.user_id, UserRoleDB.company_id == company_id,
+        UserRoleDB.is_active.is_(True), UserRoleDB.role.in_(CHANGEABLE_PORTAL_ROLES)).exists()
+    users = (await db.execute(select(UserDB.user_id, UserDB.name, UserDB.surname, UserDB.account_status).where(
+        has_staff_role).order_by(UserDB.surname, UserDB.name, UserDB.user_id).offset(page*50).limit(51))).all()
+    rows = (await db.execute(select(UserRoleDB.user_id, UserRoleDB.role).where(
+        UserRoleDB.company_id == company_id, UserRoleDB.user_id.in_([u.user_id for u in users[:50]]),
+        UserRoleDB.is_active.is_(True), UserRoleDB.role.in_(CHANGEABLE_PORTAL_ROLES)))).all()
+    grants = [r for r in CHANGEABLE_PORTAL_ROLES if await __check_permissions_granting_or_revoking_user_roles(model,r,True)]
+    revokes = [r for r in CHANGEABLE_PORTAL_ROLES if await __check_permissions_granting_or_revoking_user_roles(model,r,False)]
+    return {'users':[{'user_id':u.user_id,'name':u.name,'surname':u.surname,
+        'roles':list({r.role for r in rows if r.user_id==u.user_id}),
+        'self':u.user_id==cur_user.user_id, 'can_grant':u.account_status=='confirmed'} for u in users[:50]],
+        'grantable_roles':grants,'revocable_roles':revokes,'has_more':len(users)>50}
+
+
+@user_role_router.get('/search_staff_candidates', response_model=StaffSearchResponse)
+async def search_staff_candidates(company_id: UUID, role: PortalRole,
+                                 action: Literal['grant', 'revoke'],
+                                 q: str = Query(..., min_length=2, max_length=100),
+                                 db: AsyncSession = Depends(get_db),
+                                 cur_user: UserDB = Depends(__get_user_from_token)):
+    terms = q.split()
+    if len(' '.join(terms)) < 2 or role not in CHANGEABLE_PORTAL_ROLES:
+        raise HTTPException(422, 'Invalid search')
+    # Read active roles directly: disabled privileges must not permit user discovery.
+    roles = (await db.execute(select(UserRoleDB.role).where(
+        UserRoleDB.user_id == cur_user.user_id, UserRoleDB.is_active.is_(True),
+        or_(UserRoleDB.company_id == company_id,
+            (UserRoleDB.company_id == EMPTY_UUID) &
+            (UserRoleDB.role == PortalRole.PORTAL_ROLE_SUPER_ADMIN))))).scalars().all()
+    if not await __check_permissions_granting_or_revoking_user_roles(
+            UserRoleModel(user_roles=roles), role, action == 'grant'):
+        raise HTTPException(403, 'Forbidden')
+    if not await db.scalar(select(CompanyDB.company_id).where(
+            CompanyDB.company_id == company_id, CompanyDB.is_active.is_(True))):
+        raise HTTPException(404, 'Company not found')
+    stmt = select(UserDB.user_id, UserDB.name, UserDB.surname, UserDB.email).where(
+        UserDB.user_id != cur_user.user_id, UserDB.is_active.is_(True))
+    if action == 'grant':
+        stmt = stmt.where(UserDB.account_status == 'confirmed')
+    else:
+        stmt = stmt.where(select(UserRoleDB.relation_id).where(
+            UserRoleDB.user_id == UserDB.user_id, UserRoleDB.company_id == company_id,
+            UserRoleDB.role == role, UserRoleDB.is_active.is_(True)).exists())
+    for term in terms:
+        stmt = stmt.where(or_(func.lower(UserDB.name).contains(term.lower(), autoescape=True),
+                              func.lower(UserDB.surname).contains(term.lower(), autoescape=True)))
+    rows = (await db.execute(stmt.order_by(UserDB.surname, UserDB.name, UserDB.user_id).limit(21))).all()
+    return StaffSearchResponse(users=[StaffCandidate(
+        user_id=row.user_id, name=row.name, surname=row.surname,
+        email_hint=row.email[:1] + '***@' + row.email.rsplit('@', 1)[-1]) for row in rows[:20]],
+        has_more=len(rows) > 20)
 
 
 @user_role_router.get('/get_user_roles', response_model=List[GetUserRolesResponse])
@@ -52,6 +135,8 @@ async def grant_super_admin_privilege(db: AsyncSession = Depends(get_db),
     :param cur_user: авторизованный пользователь
     :return: id клиента, выданному права супер администратора
     """
+    from user.account_status import require_confirmed
+    require_confirmed(cur_user)
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db)
     if cur_user_role_model.is_super_admin:
         raise HTTPException(status_code=409, detail='User is already super admin')
@@ -102,6 +187,8 @@ async def grant_staff_privilege(promo_user_id: UUID,
     promo_user = await __get_user_by_id(user_id=promo_user_id, session=db)
     if promo_user is None:
         raise HTTPException(status_code=404, detail=f'User with id {promo_user_id} not found')
+    from user.account_status import require_confirmed
+    require_confirmed(promo_user)
     promo_user_role_model = await __get_user_role_model(user_id=promo_user_id, session=db,
                                                         company_id=company_id)
     if promo_user_role_model.check_existing_role(role):

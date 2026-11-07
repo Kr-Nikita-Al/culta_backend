@@ -9,7 +9,13 @@ class CreateUserRequest(BaseModel):
     surname: str
     phone: constr()
     email: EmailStr
-    password: str
+    password: constr(min_length=6, max_length=72)
+
+    @validator('password')
+    def validate_password_bytes(cls, value):
+        if len(value.encode('utf-8')) > 72:
+            raise ValueError('Password exceeds 72 UTF-8 bytes')
+        return value
 
     @validator("phone")
     def validate_phone(cls, value):

@@ -1,6 +1,6 @@
 import uuid
 
-from sqlalchemy import Column, ForeignKey, Integer, String
+from sqlalchemy import Boolean, Column, ForeignKey, Integer, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
@@ -16,10 +16,15 @@ class ItemDB(Base):
     __tablename__ = 'item'
     item_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
+    is_active = Column(Boolean, nullable=False, default=True, server_default='true')
+    is_visible = Column(Boolean, nullable=False, default=True, server_default='true')
+
     # Properties
     item_row_order = Column(Integer, default=0)
     item_column_order = Column(Integer, default=0)
     item_type = Column(String(35), default='')
+    layout_x = Column(Integer, nullable=True)
+    layout_y = Column(Integer, nullable=True)
 
     # Connection fields
     product_card_id = Column(ForeignKey("product_card.product_card_id"), primary_key=True, nullable=False)
@@ -28,4 +33,3 @@ class ItemDB(Base):
     # Navigation fields
     container_id = Column(ForeignKey("container.container_id"), primary_key=True, nullable=False)
     container_info = relationship("ContainerDB", back_populates="items", lazy="joined")
-

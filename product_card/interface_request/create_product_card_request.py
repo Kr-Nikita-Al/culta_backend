@@ -1,8 +1,9 @@
+from utils.money import Money, Percentage
 from typing import Optional
 from uuid import UUID
 from fastapi import HTTPException
 
-from pydantic import BaseModel, constr, conint, StrictBool, confloat, validator
+from pydantic import BaseModel, constr, conint, StrictBool, validator
 
 
 class CreateProductCardRequest(BaseModel):
@@ -20,9 +21,9 @@ class CreateProductCardRequest(BaseModel):
     quantity_system: Optional[constr()]
     tags: Optional[constr()]
     count_number: Optional[conint()]
-    price: Optional[confloat()]
-    cost_price: Optional[confloat()]
-    cashback_perc: Optional[confloat()]
+    price: Optional[Money]
+    cost_price: Optional[Money]
+    cashback_perc: Optional[Percentage]
     product_quantity: Optional[conint()]
     calorie_content: Optional[conint()]
     proteins: Optional[conint()]
@@ -38,23 +39,8 @@ class CreateProductCardRequest(BaseModel):
     image_product_id: Optional[constr()]
     image_icon_id: Optional[constr()]
 
-    @validator("price")
-    def validate_price(cls, value):
-        if value < 0:
-            raise HTTPException(status_code=422, detail="Incorrect price")
-        return value
 
-    @validator("cost_price")
-    def validate_cost_price(cls, value):
-        if value < 0:
-            raise HTTPException(status_code=422, detail="Incorrect cost_price")
-        return value
 
-    @validator("cashback_perc")
-    def validate_cashback_perc(cls, value):
-        if value < 0:
-            raise HTTPException(status_code=422, detail="Incorrect cashback_perc")
-        return value
 
     @validator("product_quantity")
     def validate_product_quantity(cls, value):

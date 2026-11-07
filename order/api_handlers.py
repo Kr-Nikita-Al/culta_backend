@@ -1,24 +1,120 @@
+import logging
+from typing import List, Optional
+from pydantic import constr
+from sqlalchemy import select
+from db import OrderStatusHistoryDB
+from order.interface_response.status_history_response import StatusHistoryResponse
 from uuid import UUID
 
-from fastapi import Depends, HTTPException, APIRouter
+from fastapi import Depends, HTTPException, APIRouter, Response
+from fastapi.encoders import jsonable_encoder
+from fastapi.routing import APIRoute
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from company.actions import __get_company_by_id
 from db import UserDB, STATUS_TYPE, STATUS_VALUES
 from db.session import get_db
-from sqlalchemy.exc import DBAPIError, IntegrityError
+from sqlalchemy.exc import DBAPIError, DataError, IntegrityError, InterfaceError, OperationalError
 
 from order.actions import __create_order, __check_permissions_create_order, __get_order_by_id, __get_orders, \
-    __check_permissions_update_status, __update_order_by_id
+    __update_order_by_id
+from order.status_policy import validate_transition
 from order.interface_request import CreateOrderRequest, UpdateOrderRequest
 from order.interface_response import CreateOrderResponse, GetOrderResponse, GetOrdersResponse, UpdateOrderResponse
-from order.order_product_association.actions import __create_order_product_action, __update_order_product_action
-from order.order_product_association.interface_request import CreateOrderProductRequest
 from order.websocket import order_manager
 from user.actions import __get_user_from_token, __get_user_by_id
 from user_role.actions import __get_user_role_model
 
-order_router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+class OrderRoute(APIRoute):
+    """Translate database failures without exposing SQL or driver messages."""
+
+    def get_route_handler(self):
+        route_handler = super().get_route_handler()
+
+        async def handle_request(request):
+            try:
+                return await route_handler(request)
+            except IntegrityError as exc:
+                raise HTTPException(status_code=409, detail='Order data conflict') from exc
+            except DataError as exc:
+                raise HTTPException(status_code=422, detail='Invalid order data') from exc
+            except (OperationalError, InterfaceError) as exc:
+                logger.exception('Order database is unavailable')
+                raise HTTPException(status_code=503, detail='Database unavailable') from exc
+            except DBAPIError as exc:
+                logger.exception('Unexpected order database error')
+                raise HTTPException(status_code=500, detail='Internal database error') from exc
+
+        return handle_request
+
+
+from company.modules import module_guard
+order_router = APIRouter(route_class=OrderRoute, dependencies=[Depends(module_guard('orders'))])
+
+from order.client_schemas import ClientOrderRequest, ClientOrderResponse, TableQRRequest, ResolveTableRequest
+from order import client_service
+
+
+@order_router.post('/table-qr')
+async def issue_table_qr(body: TableQRRequest, response: Response, db: AsyncSession = Depends(get_db),
+                         actor: UserDB = Depends(__get_user_from_token)):
+    async with db.begin():
+        response.headers['Cache-Control'] = 'no-store'
+        return await client_service.issue_table_qr(db, body, actor)
+
+
+@order_router.post('/resolve-table')
+async def resolve_table(body: ResolveTableRequest, db: AsyncSession = Depends(get_db),
+                        actor: UserDB = Depends(__get_user_from_token)):
+    async with db.begin():
+        await client_service.active_actor(db, actor.user_id)
+        company = await client_service.active_company(db, body.company_id)
+        table = await client_service.resolve_table(db, body.company_id, body.table_token)
+        return {'company_id': company.company_id, 'company_name': company.company_name,
+                'table_id': table.table_id, 'table_label': table.label,
+                'can_order': bool(company.work_state and company.allow_client_orders_inside)}
+
+
+@order_router.post('/create-client', response_model=ClientOrderResponse)
+async def create_client_order(body: ClientOrderRequest, db: AsyncSession = Depends(get_db),
+                               actor: UserDB = Depends(__get_user_from_token)):
+    order_body = CreateOrderRequest(company_id=body.company_id, user_id=actor.user_id,
+        check_id=body.check_id, comment=body.comment, cocking_time=0, order_items=body.order_items)
+    order = await __create_order(order_body, actor.user_id, db, client_request=body)
+    if not order.replayed:
+        await _notify_new_order(order)
+    return order
+
+
+async def _notify_new_order(order: CreateOrderResponse):
+    # The legacy global broadcast includes employees of other companies.
+    broadcast = getattr(order_manager, 'broadcast_to_company', None)
+    if broadcast is None:
+        logger.warning('Company-scoped order notifier is unavailable; order_id=%s', order.order_id)
+        return
+    try:
+        await broadcast(order.company_id, {"type": "new_order", "order": jsonable_encoder(order)})
+    except Exception:
+        logger.exception('New order notification failed; order_id=%s', order.order_id)
+
+
+async def _notify_order_updated(order_id: UUID, db: AsyncSession):
+    """Notification failures must not turn an already committed PATCH into a 500."""
+    notify = getattr(order_manager, 'notify_order_update', None)
+    if notify is None:
+        logger.warning('Order update notifier is unavailable; order_id=%s', order_id)
+        return
+    try:
+        updated_order = await __get_order_by_id(order_id, True, db)
+        if updated_order is None:
+            logger.warning('Order disappeared before notification; order_id=%s', order_id)
+            return
+        await notify(order_id, {"type": "order_updated", "order": jsonable_encoder(updated_order)})
+    except Exception:
+        logger.exception('Order update notification failed; order_id=%s', order_id)
 
 
 @order_router.post("/create", response_model=CreateOrderResponse)
@@ -26,7 +122,7 @@ async def create_order(body: CreateOrderRequest,
                        db: AsyncSession = Depends(get_db),
                        cur_user: UserDB = Depends(__get_user_from_token)) -> CreateOrderResponse:
     """
-    TODO: в момент создания заказа либо создавать новый чек, либо прикреплять к существующему незакрытому
+    Создаёт заказ и новый чек либо добавляет заказ в открытый чек официанта.
 
     :param body:
     :param db:
@@ -42,33 +138,22 @@ async def create_order(body: CreateOrderRequest,
     if company_obj is None:
         raise HTTPException(status_code=404, detail=f'Company with id {body.company_id} not found')
     # Проверка на существование сотрудника и клиента в БД
-    user_obj = await __get_user_by_id(body.user_id, db)
+    user_obj = await __get_user_by_id(body.user_id, db) if body.user_id else None
     staff_obj = await __get_user_by_id(cur_user.user_id, db)
-    if user_obj is None:
+    if body.user_id is not None and user_obj is None:
         raise HTTPException(status_code=404, detail=f'User with id {body.user_id} not found')
     if staff_obj is None:
         raise HTTPException(status_code=404, detail=f'Staff with id {cur_user.user_id} not found')
-    try:
-        order = await __create_order(body, cur_user.user_id, db)
-        if body.order_items is not None and len(body.order_items) > 0:
-            for order_item in body.order_items:
-                await __create_order_product_action(
-                    CreateOrderProductRequest(order_id=order.order_id,
-                                              product_card_id=order_item.product_card_id,
-                                              quantity=order_item.quantity),
-                    db)
-        # Уведомляем о новом заказе
-        await order_manager.broadcast_to_waiters({"type": "new_order", "order": order.dict()})
-        return order
-    except DBAPIError as e:
-        raise HTTPException(status_code=422, detail='Incorrect static_data')
+    order = await __create_order(body, cur_user.user_id, db)
+    await _notify_new_order(order)
+    return order
 
 
 @order_router.get('/get_by_id', response_model=GetOrderResponse)
 async def get_order_by_id(order_id: UUID,
                           db: AsyncSession = Depends(get_db),
                           cur_user: UserDB = Depends(__get_user_from_token),
-                          company_id: UUID = None) -> GetOrderResponse:
+                          company_id: UUID = None, include_cost: bool = True) -> GetOrderResponse:
     is_staff: bool = company_id is not None
     if is_staff:
         company = await __get_company_by_id(company_id, db)
@@ -81,18 +166,22 @@ async def get_order_by_id(order_id: UUID,
         if not (cur_user_role_model.is_admin or cur_user_role_model.is_owner or
                 cur_user_role_model.is_waiter or cur_user_role_model.is_cook):
             raise HTTPException(status_code=403, detail='Forbidden')
-    order = await __get_order_by_id(order_id, is_staff, db)
+    can_view_cost = is_staff and include_cost and (cur_user_role_model.is_admin or cur_user_role_model.is_owner)
+    order = await __get_order_by_id(order_id, is_staff, db, include_cost=can_view_cost)
+    if order is None:
+        raise HTTPException(status_code=404, detail='Order with id {0} is not found'.format(order_id))
+    if is_staff and order.company_id != company_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
     # Проверка прав на получение информации о заказе обычным юзером
     if not is_staff and order.user_id != cur_user.user_id:
         raise HTTPException(status_code=403, detail='Forbidden')
-    if order is None:
-        raise HTTPException(status_code=404, detail='Order with id {0} is not found'.format(order_id))
     return order
 
 
 @order_router.get('/get_all', response_model=GetOrdersResponse)
 async def get_all(company_id: UUID = None,
                   filter_status_str: str = '',
+                  include_cost: bool = True,
                   db: AsyncSession = Depends(get_db),
                   cur_user: UserDB = Depends(__get_user_from_token)) -> GetOrdersResponse:
     filter_status_list = []
@@ -114,7 +203,8 @@ async def get_all(company_id: UUID = None,
                 cur_user_role_model.is_waiter or cur_user_role_model.is_cook):
             raise HTTPException(status_code=403, detail='Forbidden')
     orders = await __get_orders(is_staff=is_staff, session=db, user_id=cur_user.user_id,
-                                statuses=filter_status_list, company_id=company_id)
+                                statuses=filter_status_list, company_id=company_id,
+                                include_cost=is_staff and include_cost and (cur_user_role_model.is_admin or cur_user_role_model.is_owner))
     return orders
 
 
@@ -122,9 +212,10 @@ async def get_all(company_id: UUID = None,
 async def update_status_by_id(order_id: UUID,
                               new_status: STATUS_TYPE,
                               db: AsyncSession = Depends(get_db),
-                              cur_user: UserDB = Depends(__get_user_from_token)) -> UpdateOrderResponse:
+                              cur_user: UserDB = Depends(__get_user_from_token),
+                              reason: Optional[constr(strip_whitespace=True, max_length=500)] = None) -> UpdateOrderResponse:
     """
-    TODO: закрывать чек сразу после закрытия заказа в рамках компаний с самообслуживанием
+    Меняет готовность заказа. Оплата и закрытие чека выполняются отдельно.
     :param order_id:
     :param new_status:
     :param db:
@@ -139,25 +230,31 @@ async def update_status_by_id(order_id: UUID,
     # Проверка прав на получение информации о заказе сотрудником
     cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                       company_id=order.company_id)
-    # Проверка прав на обновление статуса
-    if not (cur_user_role_model.is_admin or cur_user_role_model.is_owner or
-            cur_user_role_model.is_waiter or cur_user_role_model.is_cook):
-        raise HTTPException(status_code=403, detail='Forbidden')
-    # Проверка корректность обновления статуса
-    if not await __check_permissions_update_status(user_role_model=cur_user_role_model,
-                                             old_status=order.status,
-                                             new_status=new_status):
-        raise HTTPException(status_code=422, detail='Incorrect new status for update')
-    try:
-        upd_order_params = {'status': new_status, 'updater_id': cur_user.user_id}
-        updated_order_id = await __update_order_by_id(update_order_params=upd_order_params,
-                                                      order_id=order_id, session=db)
-        # Уведомляем об обновлении через WebSocket
-        updated_order = await __get_order_by_id(order_id, True, db)
-        await order_manager.notify_order_update(updated_order_id, {"type": "order_updated", "order": updated_order.dict()})
-        return UpdateOrderResponse(updated_order_id=updated_order_id)
-    except IntegrityError as e:
-        raise HTTPException(status_code=503, detail='Database error')
+    validate_transition(cur_user_role_model, order.status, new_status,
+                        check_id=getattr(order, 'check_id', None))
+    upd_order_params = {'status': new_status, 'updater_id': cur_user.user_id}
+    updated_order_id = await __update_order_by_id(update_order_params=upd_order_params,
+                                                 order_id=order_id, session=db,
+                                                 expected_status=order.status,
+                                                 status_reason=reason or None)
+    if updated_order_id is None:
+        raise HTTPException(status_code=409, detail='Order changed; reload and retry')
+    await _notify_order_updated(updated_order_id, db)
+    return UpdateOrderResponse(updated_order_id=updated_order_id)
+
+
+@order_router.get('/status_history', response_model=List[StatusHistoryResponse])
+async def get_status_history(order_id: UUID, company_id: UUID,
+                             db: AsyncSession = Depends(get_db),
+                             cur_user: UserDB = Depends(__get_user_from_token)):
+    # Reuse staff/company authorization. Internal reasons and actor IDs are not
+    # included in customer DTOs or socket broadcasts.
+    await get_order_by_id(order_id=order_id, company_id=company_id, db=db, cur_user=cur_user)
+    async with db.begin():
+        result = await db.execute(select(OrderStatusHistoryDB).where(
+            OrderStatusHistoryDB.order_id == order_id).order_by(
+            OrderStatusHistoryDB.changed_at, OrderStatusHistoryDB.event_id))
+        return [StatusHistoryResponse.from_orm(row) for row in result.scalars().all()]
 
 
 @order_router.patch('/update_by_id', response_model=UpdateOrderResponse)
@@ -165,9 +262,6 @@ async def update_order_by_id(order_id: UUID,
                              body: UpdateOrderRequest,
                              db: AsyncSession = Depends(get_db),
                              cur_user: UserDB = Depends(__get_user_from_token)) -> UpdateOrderResponse:
-    # Проверка, что не пытается обновиться статус
-    if 'status' in body.dict().keys():
-        raise HTTPException(status_code=422, detail='Incorrect api for status update')
     # Проверка прав на обновление данных
     order = await __get_order_by_id(order_id, True, db)
     if order is None:
@@ -180,31 +274,18 @@ async def update_order_by_id(order_id: UUID,
     if not (cur_user_role_model.is_admin or cur_user_role_model.is_owner or
             cur_user_role_model.is_waiter or cur_user_role_model.is_cook):
         raise HTTPException(status_code=403, detail='Forbidden')
-    # Попытка обновить данные компании
-    upd_order_params = body.dict(exclude_none=True)
-    if upd_order_params == {}:
+    if order.status in (STATUS_TYPE.CLOSED, STATUS_TYPE.CANCELED):
+        raise HTTPException(status_code=409, detail='Order is closed or canceled')
+    upd_order_params = body.dict(exclude_none=True, exclude={'order_items'})
+    # An empty list is a no-op, not a column to pass to SQLAlchemy UPDATE.
+    if not upd_order_params and not body.order_items:
         raise HTTPException(status_code=422, detail='All fields are empty')
-    try:
-        upd_order_params['updater_id'] = cur_user.user_id
-        if body.order_items is not None and len(body.order_items) > 0:
-            for order_item in body.order_items:
-                if await __update_order_product_action(order_id=order.order_id,
-                                                       product_card_id=order_item.product_card_id,
-                                                       update_order_product_params={'quantity': order_item.quantity},
-                                                       session=db) is None:
-                    raise HTTPException(status_code=404,
-                                        detail='Product card with id {0} is not found in order' \
-                                        .format(order_item.product_card_id))
-            del upd_order_params["order_items"]
-        updated_order_id = await __update_order_by_id(update_order_params=upd_order_params,
-                                                      order_id=order_id, session=db)
-        # Уведомляем об обновлении через WebSocket
-        updated_order = await __get_order_by_id(order_id, True, db)
-        await order_manager.notify_order_update(updated_order_id,
-                                                {"type": "order_updated", "order": updated_order.dict()})
-        if updated_order_id is None:
-            raise HTTPException(status_code=404,
-                                detail='Order with id {0} not existed or was closed/canceled'.format(order_id))
-    except IntegrityError as e:
-        raise HTTPException(status_code=503, detail='Database error')
+    upd_order_params['updater_id'] = cur_user.user_id
+    updated_order_id = await __update_order_by_id(update_order_params=upd_order_params,
+                                                 order_id=order_id, session=db,
+                                                 order_items=body.order_items,
+                                                 expected_status=order.status)
+    if updated_order_id is None:
+        raise HTTPException(status_code=409, detail='Order changed; reload and retry')
+    await _notify_order_updated(updated_order_id, db)
     return UpdateOrderResponse(updated_order_id=updated_order_id)

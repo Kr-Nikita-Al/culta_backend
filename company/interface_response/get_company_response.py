@@ -1,3 +1,6 @@
+from pydantic import validator
+from utils.money import PercentageResponse
+from utils.service_type import ServiceType
 from typing import List
 from uuid import UUID
 from datetime import datetime, time
@@ -13,6 +16,10 @@ class GetScreenIDResponse(BaseModelResponse):
 
 
 class GetCompanyResponse(BaseModelResponse):
+    orders_enabled: bool = True
+    reservations_enabled: bool = True
+    images_enabled: bool = True
+    service_type: ServiceType = ServiceType.SELF_SERVICE
     company_id: UUID
     company_name: str
     address: str
@@ -29,8 +36,10 @@ class GetCompanyResponse(BaseModelResponse):
     age_limit: bool
     work_state: bool
     is_can_client_create_order: bool
-    bonus_payment_perc: float
-    bonus_accrual_perc: float
+    allow_client_orders_inside: bool = False
+    allow_client_orders_outside: bool = False
+    bonus_payment_perc: PercentageResponse
+    bonus_accrual_perc: PercentageResponse
     creator_id: UUID
     updater_id: UUID
     time_created: datetime
@@ -38,3 +47,8 @@ class GetCompanyResponse(BaseModelResponse):
     start_time: time
     over_time: time
     screens: List[GetScreenIDResponse]
+
+    @validator('screens', pre=True, allow_reuse=True)
+    def published_children(cls, values):
+        from navigations.publication import published
+        return [value for value in values if published(value)]

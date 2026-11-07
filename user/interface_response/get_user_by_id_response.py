@@ -11,8 +11,9 @@ class GetUserResponse(BaseModelResponse):
     name: str
     surname: str
     phone: str
-    email: EmailStr
+    email: EmailStr | None
     is_active: bool
+    account_status: str
     creator_id: UUID
     updater_id: UUID
     time_created: datetime

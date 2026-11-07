@@ -14,6 +14,7 @@ async def __create_company(company_body: CreateCompanyRequest, user_id: UUID, se
             company_body.__dict__, creator_user_id=user_id
         )
         return CreateCompanyResponse(
+            service_type=company_db.service_type,
             company_id=company_db.company_id,
             company_name=company_db.company_name,
             address=company_db.address,
@@ -29,6 +30,8 @@ async def __create_company(company_body: CreateCompanyRequest, user_id: UUID, se
             bonus_accrual_perc=company_db.bonus_accrual_perc,
             bonus_payment_perc=company_db.bonus_payment_perc,
             is_can_client_create_order=company_db.is_can_client_create_order,
+            allow_client_orders_inside=company_db.allow_client_orders_inside,
+            allow_client_orders_outside=company_db.allow_client_orders_outside,
             is_active=company_db.is_active,
             age_limit=company_db.age_limit,
             work_state = company_db.work_state,

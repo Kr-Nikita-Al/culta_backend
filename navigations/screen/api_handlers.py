@@ -1,4 +1,5 @@
 from uuid import UUID
+from navigations.publication import require_published
 
 from asyncpg import UniqueViolationError
 from fastapi import APIRouter, Depends, HTTPException
@@ -42,6 +43,7 @@ async def create_screen(body: CreateScreenRequest,
 
 @screen_router.get('/get_by_id', response_model=GetScreenResponse)
 async def get_screen_by_id(screen_id: UUID, db: AsyncSession = Depends(get_db)) -> GetScreenResponse:
+    await require_published(db, 'screen', screen_id)
     screen = await __get_screen_by_id(screen_id=screen_id, session=db)
     if screen is None:
         raise HTTPException(status_code=404,

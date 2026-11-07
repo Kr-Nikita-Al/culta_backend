@@ -27,6 +27,10 @@ class ProductCardDal:
             raise HTTPException(status_code=404,
                                 detail='Company with id {0} was not exit'.format(company_id))
 
+        # Keep image references alive through commit, including during upload cleanup.
+        from utils.company_references import validate_company_references
+        await validate_company_references(self.db_session, company_id, kwargs,
+            image_fields=('image_product_id', 'image_icon_id'))
         new_product_card = ProductCardDB(
             company_id=company_id_for_adding,
             title=kwargs["title"],
@@ -69,7 +73,7 @@ class ProductCardDal:
         query = update(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,
                                                  ProductCardDB.is_active == True))\
                               .values({'is_active': False,
-                                       'updater_id': updater_id})\
+                                       'updater_id': updater_id, 'version': ProductCardDB.version + 1})\
                               .returning(ProductCardDB.product_card_id)
         res = await self.db_session.execute(query)
         deleted_product_card_id_row = res.unique().fetchone()
@@ -97,7 +101,7 @@ class ProductCardDal:
     async def update_product_card(self, product_card_id: UUID, **kwargs) -> Union[UUID, None]:
         query = update(ProductCardDB).where(and_(ProductCardDB.product_card_id == product_card_id,
                                                  ProductCardDB.is_active == True))\
-                                 .values(kwargs)\
+                                 .values(**kwargs, version=ProductCardDB.version + 1)\
                                  .returning(ProductCardDB.product_card_id)
         res = await self.db_session.execute(query)
         update_product_card_id_row = res.unique().fetchone()

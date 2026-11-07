@@ -1,3 +1,4 @@
+from utils.timestamps import utc_now
 from datetime import datetime
 
 from sqlalchemy import Column, String, ForeignKey, DateTime, Integer, Boolean, Float
@@ -39,7 +40,7 @@ class ImageDB(Base):
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
-    time_created = Column(DateTime(timezone=True), default=datetime.now())
+    time_created = Column(DateTime(timezone=True), default=utc_now)
 
 
 

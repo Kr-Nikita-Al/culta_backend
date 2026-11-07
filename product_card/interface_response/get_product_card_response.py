@@ -1,3 +1,4 @@
+from utils.money import MoneyResponse, PercentageResponse
 from datetime import datetime
 from typing import Union
 from uuid import UUID
@@ -6,6 +7,8 @@ from utils.base_model_response import BaseModelResponse
 
 
 class GetBaseProductCardResponse(BaseModelResponse):
+    version: int = 1
+    is_used: bool = False
     product_card_id: UUID
     company_id: UUID
     title: str
@@ -25,8 +28,8 @@ class GetBaseProductCardResponse(BaseModelResponse):
     is_hotness: bool
     is_active: bool
     count_number: int
-    price: float
-    cashback_perc: float
+    price: MoneyResponse
+    cashback_perc: PercentageResponse
     product_quantity: int
     calorie_content: int
     proteins: int
@@ -41,6 +44,7 @@ class GetBaseProductCardResponse(BaseModelResponse):
     def from_orm(cls, product_card):
         data = {c.name: getattr(product_card, c.name)
                 for c in product_card.__table__.columns}
+        data['is_used'] = bool(product_card.is_used)
         return cls(**data)
 
 
@@ -51,11 +55,15 @@ class GetClientProductCardResponse(GetBaseProductCardResponse):
 class GetStaffProductCardResponse(GetBaseProductCardResponse):
     """Ответ для сотрудника"""
     product_release_type: str
-    cost_price: float
     creator_id: UUID
     updater_id: UUID
     time_created: datetime
     time_updated: datetime
 
 
-GetProductCardResponse = Union[GetStaffProductCardResponse, GetClientProductCardResponse]
+class GetManagementProductCardResponse(GetStaffProductCardResponse):
+    """Financial fields are reserved for company owner/admin."""
+    cost_price: MoneyResponse
+
+
+GetProductCardResponse = Union[GetManagementProductCardResponse, GetStaffProductCardResponse, GetClientProductCardResponse]

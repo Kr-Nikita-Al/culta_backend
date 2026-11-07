@@ -28,3 +28,4 @@ class CreateImageInterface(BaseModelResponse):
 class CreateImageResponse(BaseModelResponse):
     url: str
     image: CreateImageInterface
+    required_headers: dict[str, str]

@@ -4,7 +4,7 @@ from sqlalchemy.dialects.postgresql import UUID
 
 from sqlalchemy.orm import relationship
 from db.base_model import Base
-from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy import Column, ForeignKey, String, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 
 
@@ -17,6 +17,7 @@ class AuthProvider(PyEnum):
 
 class AuthAccountDB(Base):
     __tablename__ = 'oauth_accounts'
+    __table_args__ = (UniqueConstraint('provider','provider_user_id',name='uq_oauth_provider_identity'),)
     auth_id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     provider = Column(SQLEnum(AuthProvider), nullable=False)
     provider_user_id = Column(String)

@@ -8,8 +8,10 @@ from utils import LETTER_MATCH_PATTERN_PHONE
 
 
 class UpdateContainerRequest(BaseModel):
+    class Config:
+        extra = 'forbid'
+
     container_title: Optional[constr()]
     container_sub_title: Optional[constr()]
     container_type: Optional[constr()]
     container_order_number: Optional[conint()]
-

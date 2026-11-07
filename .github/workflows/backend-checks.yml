@@ -1,0 +1,65 @@
+name: Backend checks
+
+on:
+  pull_request:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: culta_test
+          POSTGRES_PASSWORD: culta_test_only
+          POSTGRES_DB: culta_integration_test
+        ports:
+          - 55432:5432
+        options: >-
+          --health-cmd "pg_isready -U culta_test -d culta_integration_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      CULTA_INTEGRATION_DATABASE_URL: postgresql+asyncpg://culta_test:culta_test_only@127.0.0.1:55432/culta_integration_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - name: Install and validate dependencies
+        run: |
+          python -m pip install -r requirements.txt
+          python -m pip check
+      - name: Unit and PostgreSQL tests
+        run: python -B -m pytest --integration -q --tb=short --show-capture=no --junitxml=test-results.xml
+      - name: Save test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: test-results.xml
+          if-no-files-found: ignore
+          retention-days: 14
+
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build backend image
+        run: docker build --tag culta-backend:check .
+      - name: Check API startup without external network
+        run: docker run --rm --network none culta-backend:check python -B -m pytest -q tests/test_app_smoke.py tests/test_order_rest.py tests/test_order_websocket.py --tb=short --show-capture=no

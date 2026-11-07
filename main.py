@@ -1,12 +1,14 @@
 from contextlib import asynccontextmanager
 
 from order.websocket.api_handlers import order_websocket_router
-from settings import ENV
+from settings import CORS_ALLOWED_ORIGINS
 
 import uvicorn
 from fastapi import FastAPI, APIRouter
 
 from order import order_router
+from checks.api_handlers import check_router
+from reservations.api_handlers import reservation_router
 from s3_directory import s3_directory_router
 from settings import APP_PORT
 from auth import login_router
@@ -16,6 +18,7 @@ from user import user_router
 from company import company_router
 from image import image_router
 from navigations import item_router, container_router, screen_router
+from navigations.editor import editor_router
 from product_card import product_card_router
 from user_role import user_role_router
 from utils.ping_api import service_router
@@ -37,16 +40,10 @@ app = FastAPI(title="culta_backend", lifespan=lifespan)
 # Создаем основной роутер
 main_api_router = APIRouter()
 
-# Безопасная конфигурация для продакшена
-allowed_origins = ["*"]
-
-# Разрешить локальные домены для разработки
-if ENV == "development":
-    allowed_origins.extend([
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://0.0.0.0:3000"
-    ])
+# Credentialed OAuth requests require explicit trusted origins, never '*'.
+allowed_origins = CORS_ALLOWED_ORIGINS
+if '*' in allowed_origins:
+    raise ValueError('CORS_ALLOWED_ORIGINS must contain explicit origins')
 
 # Настройки CORS
 app.add_middleware(
@@ -66,17 +63,24 @@ main_api_router.include_router(user_role_router, prefix="/user_role", tags=["use
 main_api_router.include_router(company_router, prefix="/company", tags=["company"])
 main_api_router.include_router(product_card_router, prefix="/product_card", tags=["product_card"])
 main_api_router.include_router(image_router, prefix="/image", tags=["image"])
+from image.photo_api import photo_router
+main_api_router.include_router(photo_router, prefix="/photos", tags=["photos"])
 main_api_router.include_router(s3_directory_router, prefix="/s3_directory", tags=["s3_directory"])
 main_api_router.include_router(item_router, prefix="/item_navigation", tags=["item_navigation"])
+main_api_router.include_router(editor_router, prefix="/navigation_editor", tags=["navigation_editor"])
 main_api_router.include_router(container_router, prefix="/container_navigation", tags=["container_navigation"])
 main_api_router.include_router(screen_router, prefix="/screen_navigation", tags=["screen_navigation"])
 main_api_router.include_router(login_router, prefix="/login", tags=["login"])
 main_api_router.include_router(order_router, prefix="/order", tags=["order_router"])
+main_api_router.include_router(check_router, prefix="/check", tags=["checks"])
+main_api_router.include_router(reservation_router, prefix="/reservations", tags=["reservations"])
 main_api_router.include_router(order_websocket_router, prefix="/order_websocket_router", tags=["order_websocket_router"])
 main_api_router.include_router(static_data_router, prefix="/static_data", tags=["static_data_router"])
 
 
 # Добавляем роутер в приложение
+from company.admin_statistics import router as admin_statistics_router
+main_api_router.include_router(admin_statistics_router, prefix='/admin', tags=['superadmin'])
 app.include_router(main_api_router)
 
 if __name__ == "__main__":

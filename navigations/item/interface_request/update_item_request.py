@@ -5,6 +5,9 @@ from pydantic import BaseModel, validator, constr, conint
 
 
 class UpdateItemRequest(BaseModel):
+    class Config:
+        extra = 'forbid'
+
     item_type: Optional[constr()]
     item_column_order: Optional[conint()]
     item_row_order: Optional[conint()]

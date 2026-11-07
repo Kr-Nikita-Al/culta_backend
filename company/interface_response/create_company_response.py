@@ -1,3 +1,5 @@
+from utils.money import PercentageResponse
+from utils.service_type import ServiceType
 from datetime import datetime, time
 from uuid import UUID
 
@@ -7,6 +9,7 @@ from utils.base_model_response import BaseModelResponse
 
 
 class CreateCompanyResponse(BaseModelResponse):
+    service_type: ServiceType = ServiceType.SELF_SERVICE
     company_id: UUID
     company_name: str
     address: str
@@ -19,9 +22,11 @@ class CreateCompanyResponse(BaseModelResponse):
     group_id: int
     image_picture_id: UUID
     image_icon_id: UUID
-    bonus_accrual_perc: float
-    bonus_payment_perc: float
+    bonus_accrual_perc: PercentageResponse
+    bonus_payment_perc: PercentageResponse
     is_can_client_create_order: bool
+    allow_client_orders_inside: bool = False
+    allow_client_orders_outside: bool = False
     is_active: bool
     age_limit: bool
     work_state: bool

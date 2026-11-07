@@ -21,5 +21,7 @@ def check_file_path_put(obj_dict: Dict, file_path: str, file_name: str, company_
     request_dir_path = file_path[:file_path.index('/', file_path.index('/') + 1)]
     if real_dir_path != request_dir_path:
         return False
-    enlargement = file_name.split('.')[1]
-    return file_path in obj_dict.keys() and enlargement in IMAGE_ENLARGEMENTS
+    enlargement = file_name.rsplit('.', 1)[1].lower()
+    # S3 has no real directories: a company's root need not have a marker object.
+    directory_exists = file_path == real_dir_path + '/' or file_path in obj_dict
+    return directory_exists and enlargement in IMAGE_ENLARGEMENTS

@@ -5,6 +5,7 @@ Env.read_env()
 
 # Обязательно указывается связка в url postgresql+asyncpg для асинхронного подключения к БД//логин:пароль@хост:порт/бд
 ENV: int = env.str("ENV")
+CORS_ALLOWED_ORIGINS = env.list('CORS_ALLOWED_ORIGINS', ['http://localhost:3000', 'http://127.0.0.1:3000'])
 # Database settings
 REAL_DATABASE_URL = env.str("REAL_DATABASE_URL")
 # App settings
@@ -26,5 +27,9 @@ AWS_SECRET_ACCESS_KEY: int = env.str("AWS_SECRET_ACCESS_KEY")
 YANDEX_CLIENT_ID: str = env.str("YANDEX_CLIENT_ID")
 YANDEX_CLIENT_SECRET: str = env.str("YANDEX_CLIENT_SECRET")
 YANDEX_REDIRECT_URI: str = env.str("YANDEX_REDIRECT_URI")
-
-
+GOOGLE_CLIENT_ID = env.str('GOOGLE_CLIENT_ID', '')
+GOOGLE_CLIENT_SECRET = env.str('GOOGLE_CLIENT_SECRET', '')
+GOOGLE_REDIRECT_URI = env.str('GOOGLE_REDIRECT_URI', 'http://localhost:3000/auth/google/callback')
+TELEGRAM_CLIENT_ID = env.str('TELEGRAM_CLIENT_ID', '')
+TELEGRAM_CLIENT_SECRET = env.str('TELEGRAM_CLIENT_SECRET', '')
+TELEGRAM_REDIRECT_URI = env.str('TELEGRAM_REDIRECT_URI', 'http://localhost:3000/auth/telegram/callback')

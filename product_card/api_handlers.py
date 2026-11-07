@@ -16,11 +16,13 @@ from db.session import get_db
 from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
 from utils.constants import EMPTY_UUID
+from product_card.interface_response.get_product_card_response import GetStaffProductCardResponse
+from typing import Union
 
 product_card_router = APIRouter()
 
 
-@product_card_router.post('/create', response_model=CreateProductCardResponse)
+@product_card_router.post('/create', response_model=Union[CreateProductCardResponse, GetStaffProductCardResponse])
 async def create_product_card(body: CreateProductCardRequest,
                               db: AsyncSession = Depends(get_db),
                               cur_user: UserDB = Depends(__get_user_from_token)) -> CreateProductCardResponse:
@@ -36,7 +38,7 @@ async def create_product_card(body: CreateProductCardRequest,
                            ['image_product_id', 'image_icon_id'] if img_id in create_product_card_params.keys()}
         if images_upd_dict != {}:
             await __update_status_used_image(images_upd_dict=images_upd_dict, session=db)
-        return product_card
+        return product_card if cur_user_role_model.is_admin or cur_user_role_model.is_owner else GetStaffProductCardResponse.parse_obj(product_card.dict())
     except DBAPIError as e:
         raise HTTPException(status_code=422,
                             detail='Incorrect static_data')
@@ -68,15 +70,23 @@ async def delete_product_card(product_card_id: UUID,
 async def get_product_card_by_id(product_card_id: UUID,
                                  db: AsyncSession = Depends(get_db),
                                  cur_user: UserDB = Depends(__get_user_from_token),
-                                 company_id: UUID = EMPTY_UUID) -> GetProductCardResponse:
+                                 company_id: UUID = EMPTY_UUID, include_cost: bool = True) -> GetProductCardResponse:
+    # Resolve the actual product company before evaluating financial permissions.
+    product_card = await __get_product_card_by_id(product_card_id, False, db)
+    if product_card is None:
+        raise HTTPException(status_code=404, detail='Product card not found')
+    if company_id != EMPTY_UUID and product_card.company_id != company_id:
+        raise HTTPException(status_code=403, detail='Forbidden')
     is_staff = False
+    can_view_cost = False
     if company_id != EMPTY_UUID:
         # Проверка прав на получение информации о заказе сотрудником
         cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                           company_id=company_id)
         is_staff = cur_user_role_model.is_admin or cur_user_role_model.is_owner or cur_user_role_model.is_waiter
+        can_view_cost = include_cost and (cur_user_role_model.is_admin or cur_user_role_model.is_owner)
 
-    product_card = await __get_product_card_by_id(product_card_id, is_staff, db)
+    product_card = await __get_product_card_by_id(product_card_id, is_staff, db, include_cost=can_view_cost)
     if product_card is None:
         raise HTTPException(status_code=404,
                             detail='Product card with id {0} is not found or was deleted before'.format(product_card_id))
@@ -85,19 +95,22 @@ async def get_product_card_by_id(product_card_id: UUID,
 
 @product_card_router.get('/get_product_cards_company_by_id', response_model=GetProductsInCompanyResponse)
 async def get_product_cards_by_company_id(company_id: UUID,
+                                          include_cost: bool = True,
                                           db: AsyncSession = Depends(get_db),
                                           cur_user: UserDB = Depends(__get_user_from_token)) -> GetProductsInCompanyResponse:
     is_staff = False
+    can_view_cost = False
     if company_id != EMPTY_UUID:
         # Проверка прав на получение информации о заказе сотрудником
         cur_user_role_model = await __get_user_role_model(user_id=cur_user.user_id, session=db,
                                                           company_id=company_id)
         is_staff = cur_user_role_model.is_admin or cur_user_role_model.is_owner or cur_user_role_model.is_waiter
+        can_view_cost = include_cost and (cur_user_role_model.is_admin or cur_user_role_model.is_owner)
     company = await __get_company_by_id(company_id, db)
     if company is None:
         raise HTTPException(status_code=404,
                             detail='Company with id {0} is not found or was deleted before'.format(company_id))
-    products = await __get_products_by_company_id(company_id, is_staff, db)
+    products = await __get_products_by_company_id(company_id, is_staff, db, include_cost=can_view_cost)
     return products
 
 
@@ -107,7 +120,7 @@ async def update_product_card_by_id(product_card_id: UUID,
                                     db: AsyncSession = Depends(get_db),
                                     cur_user: UserDB = Depends(__get_user_from_token)) -> UpdateProductResponse:
     # Проверка на существование обновляемой карточки продукта
-    upd_product_card = await __get_product_card_by_id(product_card_id=product_card_id, session=db)
+    upd_product_card = await __get_product_card_by_id(product_card_id=product_card_id, is_staff=True, session=db)
     if upd_product_card is None:
         raise HTTPException(status_code=404,
                             detail='Product card with id {0} is not found'.format(product_card_id))
@@ -118,7 +131,7 @@ async def update_product_card_by_id(product_card_id: UUID,
         raise HTTPException(status_code=403, detail='Forbidden')
     # Попытка обновить данные карточки продукта
     upd_product_card_params = body.dict(exclude_none=True)  # exclude_none, чтобы удалить незаполненные поля
-    if upd_product_card_params == {}:
+    if not set(upd_product_card_params) - {'version'}:
         raise HTTPException(status_code=422, detail='All fields are empty')
     try:
         upd_product_card_params['updater_id'] = cur_user.user_id
@@ -134,4 +147,4 @@ async def update_product_card_by_id(product_card_id: UUID,
     if updated_product_card_id is None:
         raise HTTPException(status_code=404,
                             detail='Product card with id {0} was deleted'.format(product_card_id))
-    return UpdateProductResponse(updated_product_card_id=updated_product_card_id)
+    return UpdateProductResponse(updated_product_card_id=updated_product_card_id, version=body.version + 1)

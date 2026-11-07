@@ -1,4 +1,5 @@
 from datetime import time
+from utils.service_type import ServiceType
 from typing import Optional
 
 from fastapi import HTTPException
@@ -8,6 +9,9 @@ from utils import LETTER_MATCH_PATTERN_PHONE
 
 
 class CreateCompanyRequest(BaseModel):
+    allow_client_orders_inside: StrictBool = False
+    allow_client_orders_outside: StrictBool = False
+    service_type: ServiceType = ServiceType.SELF_SERVICE
     company_name: constr(min_length=1, max_length=20)
     address: Optional[constr(min_length=1, max_length=50)]
     phone: constr()

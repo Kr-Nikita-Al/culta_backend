@@ -8,7 +8,7 @@ from order.interface_response.get_order_response import convert_order_to_respons
 from order.model_dal import OrderDal
 
 
-async def __get_order_by_id(order_id: UUID, is_staff: bool, session: AsyncSession) -> Union[GetStaffOrderResponse,
+async def __get_order_by_id(order_id: UUID, is_staff: bool, session: AsyncSession, include_cost: bool = False) -> Union[GetStaffOrderResponse,
                                                                                             GetClientOrderResponse,
                                                                                             None]:
     async with session.begin():
@@ -18,7 +18,6 @@ async def __get_order_by_id(order_id: UUID, is_staff: bool, session: AsyncSessio
         )
     if order is None:
         return order
-    return convert_order_to_response(order, is_staff)
-
+    return convert_order_to_response(order, is_staff, include_cost)
 
 

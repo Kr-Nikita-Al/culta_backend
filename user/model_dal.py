@@ -18,7 +18,7 @@ class UserDAL:
 
     async def create_user(self, name: str, surname: str, phone: str,
                           email: str, hashed_password: str) -> UserDB:
-        if await self.get_user_by_email(email):
+        if email is not None and await self.get_user_by_email(email):
             raise HTTPException(status_code=404,
                                 detail='User with email {0} already exists'.format(email))
         new_user = UserDB(
@@ -30,13 +30,15 @@ class UserDAL:
         )
         self.db_session.add(new_user)
         await self.db_session.flush()
+        from bonuses.service import record_initial
+        await record_initial(self.db_session, new_user, welcome=True)
         return new_user
 
     async def delete_user(self, user_id: UUID) -> Union[UUID, None]:
         query = (
             update(UserDB)
             .where(and_(UserDB.user_id == user_id, UserDB.is_active == True))
-            .values(is_active=False)
+            .values(is_active=False, account_status='deleted', email_code_hash=None)
             .returning(UserDB.user_id)
         )
         res = await self.db_session.execute(query)
@@ -54,7 +56,7 @@ class UserDAL:
         return None
 
     async def get_user_by_email(self, email: str) -> Union[UserDB, None]:
-        query = select(UserDB).where(UserDB.email == email)
+        query = select(UserDB).where(UserDB.email == email).execution_options(populate_existing=True)
         res = await self.db_session.execute(query)
         user_row = res.fetchone()
         if user_row is not None:

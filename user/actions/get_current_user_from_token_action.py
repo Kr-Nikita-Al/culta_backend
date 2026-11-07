@@ -37,7 +37,22 @@ async def __get_user_from_token(
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    user = await __get_user_by_email_for_auth(email=email, session=db)
+    if 'uid' in payload:
+        from uuid import UUID
+        from sqlalchemy import select
+        from db import UserDB
+        try:
+            user_id = UUID(payload['uid'])
+        except (ValueError, TypeError, AttributeError):
+            raise credentials_exception
+        async with db.begin():
+            user = await db.scalar(select(UserDB).where(UserDB.user_id == user_id))
+    else:
+        user = await __get_user_by_email_for_auth(email=email, session=db)
     if user is None:
         raise credentials_exception
+    from user.account_status import require_confirmed
+    require_confirmed(user)
+    from auth.session_validation import require_live_session
+    await require_live_session(db, user, payload)
     return user

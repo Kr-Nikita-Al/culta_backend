@@ -14,6 +14,10 @@ class CompanyDal:
 
     async def create_company(self, kwargs, creator_user_id: UUID) -> CompanyDB:
         new_company = CompanyDB(
+            allow_client_orders_inside=kwargs.get('allow_client_orders_inside', False),
+            allow_client_orders_outside=kwargs.get('allow_client_orders_outside', False),
+            is_can_client_create_order=bool(kwargs.get('allow_client_orders_inside') or kwargs.get('allow_client_orders_outside')),
+            service_type=kwargs.get('service_type', 'self_service'),
             company_name=kwargs["company_name"],
             address=kwargs["address"],
             phone=kwargs["phone"],

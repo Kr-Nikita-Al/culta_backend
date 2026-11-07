@@ -5,9 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from product_card.interface_response import GetStaffProductsInCompanyResponse, GetClientProductsInCompanyResponse, \
     GetProductsInCompanyResponse, GetStaffProductCardResponse, GetClientProductCardResponse
 from product_card.model_dal import ProductCardDal
+from product_card.interface_response.get_products_in_company_response import GetManagementProductsInCompanyResponse
+from product_card.interface_response.get_product_card_response import GetManagementProductCardResponse
 
 
-async def __get_products_by_company_id(company_id: UUID, is_staff: bool, session: AsyncSession) -> (
+async def __get_products_by_company_id(company_id: UUID, is_staff: bool, session: AsyncSession, include_cost: bool = False) -> (
         GetProductsInCompanyResponse):
     async with session.begin():
         product_card_dal = ProductCardDal(session)
@@ -16,7 +18,9 @@ async def __get_products_by_company_id(company_id: UUID, is_staff: bool, session
         )
 
     if product_cards is None:
-        return GetProductsInCompanyResponse(products=[])
+        product_cards = []
+    if is_staff and include_cost:
+        return GetManagementProductsInCompanyResponse(products=[GetManagementProductCardResponse.from_orm(card) for card in product_cards])
     if is_staff:
         products = [GetStaffProductCardResponse.from_orm(card) for card in product_cards]
         return GetStaffProductsInCompanyResponse(products=products)

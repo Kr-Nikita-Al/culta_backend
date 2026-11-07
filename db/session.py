@@ -15,6 +15,7 @@ import settings
 engine = create_async_engine(settings.REAL_DATABASE_URL,
                              future=True,
                              echo=True,
+                             hide_parameters=True,
                              pool_size=20,
                              max_overflow=10,
                              pool_timeout=30,  # 30 секунд таймаут для получения соединения
@@ -42,5 +43,4 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
-
 

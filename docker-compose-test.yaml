@@ -1,0 +1,16 @@
+services:
+  postgres-test:
+    image: postgres:14.1-alpine
+    environment:
+      POSTGRES_USER: culta_test
+      POSTGRES_PASSWORD: culta_test_only
+      POSTGRES_DB: culta_integration_test
+    ports:
+      - "127.0.0.1:55432:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U culta_test -d culta_integration_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30

@@ -24,7 +24,7 @@ async def __check_permissions_granting_or_revoking_user_roles(user_roles: UserRo
     elif promo_or_demo_role == PortalRole.PORTAL_ROLE_MODERATOR and (user_roles.is_admin or user_roles.is_owner):
         return True
     # Выдать/отозвать роль официанта может владелец или администратор заведения
-    elif promo_or_demo_role == PortalRole.PORTAL_ROLE_WAITER and (user_roles.is_admin or user_roles.is_owner):
+    elif promo_or_demo_role in (PortalRole.PORTAL_ROLE_WAITER, PortalRole.PORTAL_ROLE_HOSTESS) and (user_roles.is_admin or user_roles.is_owner):
         return True
     # Выдать/отозвать роль повара может владелец или администратор заведения
     elif promo_or_demo_role == PortalRole.PORTAL_ROLE_COOK and (user_roles.is_admin or user_roles.is_owner):

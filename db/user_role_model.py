@@ -1,3 +1,4 @@
+from utils.timestamps import utc_now
 import uuid
 from datetime import datetime
 from sqlalchemy.dialects.postgresql import ARRAY
@@ -30,7 +31,8 @@ class UserRoleDB(Base):
 
     # Technical fields
     creator_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
-    time_created = Column(DateTime(timezone=True), default=datetime.now())
+    time_created = Column(DateTime(timezone=True), default=utc_now)
     avatar_id = Column(UUID(as_uuid=True), default=EMPTY_UUID)
+    avatar_default = Column(Boolean, nullable=False, default=False, server_default='false')
 
     user = relationship("UserDB", back_populates="roles")

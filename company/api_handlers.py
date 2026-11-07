@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Header
 from sqlalchemy.exc import IntegrityError, DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,7 +19,54 @@ from user.actions import __get_user_from_token
 from user_role.actions import __get_user_role_model
 from utils.constants import BASE_STORAGE_DIRECTORY
 
+from company.edit_lease import router as lease_router, assert_company_edit
 company_router = APIRouter()
+company_router.include_router(lease_router)
+
+
+from company.infrastructure import InfrastructureRequest, infrastructure_response
+from sqlalchemy import select
+from db import CompanyDB
+
+
+@company_router.get('/infrastructure')
+async def get_infrastructure(company_id: UUID, db: AsyncSession = Depends(get_db),
+                             actor: UserDB = Depends(__get_user_from_token)):
+    role = await __get_user_role_model(actor.user_id, db, company_id)
+    if not actor.is_active or not (role.is_owner or role.is_admin):
+        raise HTTPException(403, 'Forbidden')
+    async with db.begin():
+        company = await db.get(CompanyDB, company_id)
+        if company is None or not company.is_active:
+            raise HTTPException(404, 'Company not found')
+        return infrastructure_response(company)
+
+
+@company_router.put('/infrastructure')
+async def put_infrastructure(company_id: UUID, body: InfrastructureRequest, x_company_edit_token: UUID = Header(None),
+                             db: AsyncSession = Depends(get_db), actor: UserDB = Depends(__get_user_from_token)):
+    role = await __get_user_role_model(actor.user_id, db, company_id)
+    if not actor.is_active or not (role.is_owner or role.is_admin):
+        raise HTTPException(403, 'Forbidden')
+    async with db.begin():
+        company = (await db.execute(select(CompanyDB).where(CompanyDB.company_id == company_id)
+            .with_for_update(of=CompanyDB).execution_options(populate_existing=True))).unique().scalar_one_or_none()
+        if company is None or not company.is_active:
+            raise HTTPException(404, 'Company not found')
+        await assert_company_edit(db, company, actor.user_id, x_company_edit_token)
+        if company.infrastructure_version != body.version:
+            raise HTTPException(409, 'Settings changed. Reload before saving')
+        company.bonus_payment_perc = body.bonus_payment_perc
+        company.bonus_accrual_perc = body.bonus_accrual_perc
+        company.loyalty_levels = [dict(name=x.name, threshold=str(x.threshold),
+            bonus_payment_perc=str(x.bonus_payment_perc), bonus_accrual_perc=str(x.bonus_accrual_perc))
+            for x in sorted(body.levels, key=lambda x: x.threshold)]
+        for name in ('orders_enabled', 'reservations_enabled', 'images_enabled'):
+            setattr(company, name, getattr(body, name))
+        company.infrastructure_version += 1
+        company.updater_id = actor.user_id
+        await db.flush()
+        return infrastructure_response(company)
 
 
 @company_router.post("/create", response_model=CreateCompanyResponse)
@@ -83,6 +130,7 @@ async def get_all_companies(db: AsyncSession = Depends(get_db)) -> GetAllCompany
 @company_router.patch('/update_by_id', response_model=UpdateCompanyResponse)
 async def update_company_by_id(company_id: UUID,
                                body: UpdateCompanyRequest,
+                               x_company_edit_token: UUID = Header(None),
                                db: AsyncSession = Depends(get_db),
                                cur_user: UserDB = Depends(__get_user_from_token)) -> UpdateCompanyResponse:
     # Проверка прав на обновление данных
@@ -101,7 +149,7 @@ async def update_company_by_id(company_id: UUID,
     try:
         upd_company_params['updater_id'] = cur_user.user_id
         updated_company_id = await __update_company_by_id(update_company_params=upd_company_params,
-                                                          company_id=company_id, session=db)
+                                                          company_id=company_id, session=db, lease_token=x_company_edit_token)
         # Обновление статуса изображений в случае наличия их в upd_company_params
         images_upd_dict = {upd_company.__getattribute__(img_id): upd_company_params[img_id] for img_id in
                            ['image_picture_id', 'image_icon_id'] if img_id in upd_company_params.keys()}

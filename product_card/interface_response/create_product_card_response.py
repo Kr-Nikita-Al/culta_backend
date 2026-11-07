@@ -1,3 +1,4 @@
+from utils.money import MoneyResponse, PercentageResponse
 from datetime import datetime
 from uuid import UUID
 
@@ -26,9 +27,9 @@ class CreateProductCardResponse(BaseModelResponse):
     is_hotness: bool
     is_active: bool
     count_number: int
-    price: float
-    cost_price: float
-    cashback_perc: float
+    price: MoneyResponse
+    cost_price: MoneyResponse
+    cashback_perc: PercentageResponse
     product_quantity: int
     calorie_content: int
     proteins: int

@@ -1,4 +1,5 @@
 from uuid import UUID
+from navigations.publication import require_published
 
 from asyncpg import UniqueViolationError
 from fastapi import APIRouter, Depends, HTTPException
@@ -48,6 +49,7 @@ async def create_container(body: CreateContainerRequest,
 
 @container_router.get('/get_by_id', response_model=GetContainerResponse)
 async def get_container_by_id(container_id: UUID, db: AsyncSession = Depends(get_db)) -> GetContainerResponse:
+    await require_published(db, 'container', container_id)
     container = await __get_container_by_id(container_id=container_id, session=db)
     if container is None:
         raise HTTPException(status_code=404,

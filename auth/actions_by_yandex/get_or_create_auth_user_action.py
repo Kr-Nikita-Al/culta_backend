@@ -37,6 +37,12 @@ async def __get_or_create_auth_user(
     user = None
     if email:
         user = await __get_user_by_email_for_auth(email=email, session=db)
+    if user and (not user.is_active or user.account_status in ('blocked', 'deleted')):
+        from fastapi import HTTPException
+        raise HTTPException(403, 'Account unavailable')
+    if user:
+        from fastapi import HTTPException
+        raise HTTPException(409, 'An account with this email already exists. Sign in using its original method and connect Yandex in your profile.')
     # Создание нового пользователя если не найден
     if not user:
         random_password = [choice(ascii_lowercase +digits if i != 5 else ascii_uppercase) for i in range(25)]
@@ -44,18 +50,6 @@ async def __get_or_create_auth_user(
                                       password=''.join(random_password), phone=phone)
         # Создания пользователя в БД
         user = await __create_user(user_body=user_body, session=db)
-        # Выделения прав пользователя
-        _ = await __grant_user_role(GrantUserRoleRequest(user_id=user.user_id,
-                                                         role=PortalRole.PORTAL_ROLE_USER,
-                                                         creator_id=user.user_id), db)
-        # Создания папки в s3 storage
-        s3client = S3Client()
-        await s3client.create_directory(dir_path=BASE_STORAGE_DIRECTORY.USER,
-                                        dir_name="user_{0}".format(str(user.user_id)))
-        # Создание qr кода
-        qr_code = await asyncio.to_thread(__generate_qr_base64, str(user.user_id))
-        _ = await __update_user(update_user_params={'qr_code': qr_code},
-                                user_id=user.user_id, session=db)
     # Проверяем, нет ли уже привязки этого провайдера
     existing_account = await __get_auth_account_by_user_id(user_id=user.user_id, provider=provider, session=db)
     if not existing_account:

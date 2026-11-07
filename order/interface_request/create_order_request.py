@@ -1,30 +1,28 @@
 from typing import Optional, List
 from uuid import UUID
-from fastapi import HTTPException
 
-from pydantic import BaseModel, constr, conint, validator
+from pydantic import BaseModel, constr, conint
+from utils.order_quantity import CreateQuantity
 
 
 class OrderProductItem(BaseModel):
     product_card_id: UUID
-    quantity: conint()
+    quantity: conint(ge=0)
 
-    @validator("quantity")
-    def validate_quantity(cls, value):
-        if value < 0:
-            raise HTTPException(status_code=422, detail="Incorrect quantity")
-        return value
+
+class CreateOrderProductItem(OrderProductItem):
+    quantity: CreateQuantity
 
 
 class CreateOrderRequest(BaseModel):
+    check_id: Optional[UUID] = None
     company_id: UUID
-    user_id: UUID
-    comment: Optional[constr()]
-    cocking_time: Optional[conint()]
-    order_items: Optional[List[OrderProductItem]]
+    user_id: Optional[UUID] = None
+    guest_name: Optional[constr(strip_whitespace=True, max_length=100)] = None
+    table_id: Optional[UUID] = None
+    comment: Optional[constr(max_length=500)] = None
+    cocking_time: Optional[conint(ge=0)] = None
+    order_items: Optional[List[CreateOrderProductItem]] = None
 
-    @validator("cocking_time")
-    def validate_cocking_time(cls, value):
-        if value < 0:
-            raise HTTPException(status_code=422, detail="Incorrect cocking_time")
-        return value
+    class Config:
+        extra = 'forbid'

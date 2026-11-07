@@ -1,3 +1,4 @@
+from pydantic import validator
 from datetime import datetime
 from typing import List
 from uuid import UUID
@@ -19,4 +20,8 @@ class GetScreenResponse(BaseModelResponse):
     time_updated: datetime
     containers: List[GetContainerResponse]
 
+    @validator('containers', pre=True, allow_reuse=True)
+    def published_children(cls, values):
+        from navigations.publication import published
+        return [value for value in values if published(value)]
 

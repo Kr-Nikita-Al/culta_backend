@@ -1,10 +1,14 @@
 from typing import Optional
+from uuid import UUID
 from fastapi import HTTPException
 
 from pydantic import BaseModel, constr, conint, StrictBool, validator
 
 
 class UpdateImageRequest(BaseModel):
+    class Config:
+        extra = 'forbid'
+
     title: Optional[constr()]
     file_name: Optional[constr()]
     type_col: Optional[constr()]
@@ -16,7 +20,7 @@ class UpdateImageRequest(BaseModel):
     width: Optional[conint()]
     height: Optional[conint()]
     is_hidden: Optional[StrictBool]
-    company_group_id: Optional[constr()]
+    company_group_id: Optional[UUID]
 
     @validator("width")
     def validate_width(cls, value):
@@ -29,5 +33,3 @@ class UpdateImageRequest(BaseModel):
         if value < 0:
             raise HTTPException(status_code=422, detail="Incorrect height")
         return value
-
-

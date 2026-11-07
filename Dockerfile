@@ -1,4 +1,4 @@
-ARG BASE_IMAGE=python:3.9-slim-buster
+ARG BASE_IMAGE=python:3.12-slim-bookworm
 FROM $BASE_IMAGE
 
 # system update & package install
@@ -9,12 +9,13 @@ RUN apt-get -y update && \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-COPY . .
-WORKDIR .
+WORKDIR /app
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
 
 # pip
-RUN python3 -m pip install --user --upgrade pip && \
-    python3 -m pip install -r requirements.txt
+COPY requirements.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt && python -m pip check
+COPY . .
 
 EXPOSE 8000
 

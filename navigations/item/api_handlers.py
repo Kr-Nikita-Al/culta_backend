@@ -1,4 +1,5 @@
 from uuid import UUID
+from navigations.publication import require_published
 
 import psycopg2
 import sqlalchemy
@@ -60,6 +61,7 @@ async def create_item(body: CreateItemRequest,
 
 @item_router.get('/get_by_id', response_model=GetItemResponse)
 async def get_item_by_id(item_id: UUID, db: AsyncSession = Depends(get_db)) -> GetItemResponse:
+    await require_published(db, 'item', item_id)
     item = await __get_item_by_id(item_id=item_id, session=db)
     if item is None:
         raise HTTPException(status_code=404,
